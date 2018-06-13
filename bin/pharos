@@ -295,6 +295,25 @@ function _pharos_subcommand_list-remote() {
   done
 }
 
+function _pharos_subcommand_list() {
+  local found=""
+  for binary in ${PHAROS_BIN_ROOT}/*; do
+    if [ -f "$binary" ]; then
+      IFS="@" read -r tool version <<< "${binary}"
+      if [ "${version}" = "$(current_version)" ]; then
+        echo "$(basename "${tool}") ${version} (current)"
+      else
+        echo "$(basename "${tool}") ${version}"
+      fi
+      found="true"
+    fi
+  done
+
+  if [ "${found}" != "true" ]; then
+    echo "Nothing installed"
+  fi
+}
+
 function subcommand() {
 
   validate_external_tools
