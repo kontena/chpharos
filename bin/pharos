@@ -1,0 +1,319 @@
+#!/bin/bash
+
+set -e
+
+PHAROS_VM_VERSION=0.1.0
+PHAROS_BIN_ROOT="$HOME/.pharos/bin"
+
+function error_exit() {
+  (>&2 echo "error: $1"); exit 1
+}
+
+function os() {
+  if uname -s | grep -q Darwin; then
+    echo "darwin"
+  else
+    echo "linux"
+  fi
+}
+
+function cpu() {
+  local uname_m=$(uname -m)
+  case "${uname_m}" in
+    amd64)  echo "amd64" ;;
+    x86_64) echo "amd64" ;;
+    *) error_exit "Unsupported processor architecture" ;;
+  esac
+}
+
+function find_versionfile_ascending() {
+  local current_path="$(pwd)"
+
+  while ! [ -e "${current_path}/.pharos-version" ] && [ -n "${current_path}" ]; do
+    current_path="${current_path%/*}"
+  done
+  [ -e "${current_path}/.pharos-version" ] && echo "${current_path}/.pharos-version"
+}
+
+function current_version() {
+  if [ "${PHAROS_VERSION}" != "" ]; then
+    echo "${PHAROS_VERSION}"
+  elif [ -f ".pharos-version" ]; then
+    cat .pharos-version
+  elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
+    cat "$(git rev-parse --show-toplevel)/.pharos-version"
+  else
+    local ascending="$(find_versionfile_ascending)"
+    if [ "${ascending}" != "" ]; then
+      cat "${ascending}"
+    fi
+  fi
+}
+
+function version_path() {
+  local tool=$1
+  local version=$2
+  echo "${PHAROS_BIN_ROOT}/pharos-${tool}@${version}"
+}
+
+function version_is_installed() {
+  local tool="$1"
+  local version="$2"
+
+  if [ -f "$(version_path $tool $version)" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function validate_external_tools() {
+  (which curl > /dev/null || which wget > /dev/null) || error_exit "curl or wget not installed"
+  which shasum > /dev/null || error_exit "shasum not installed"
+}
+
+function _pharos_subcommand_--help() {
+  cat <<EOF
+Usage: $0 [version-number] <sub-command> <sub-command-options>
+
+$0 use <version>                  Set the current Kontena Pharos version
+$0 install [--force] <version>    Install Kontena Pharos version
+$0 uninstall <version>            Uninstall Kontena Pharos version
+$0 current                        Show the current Kontena Pharos version
+$0 list                           List installed Kontena Pharos versions
+$0 list-remote                    List remote Kontnea Pharos versions available for install
+$0 version                        Show pharos and pharos-cluster version
+
+$0 --help                         Show this help
+$0 --version                      Show pharos version ${PHAROS_VM_VERSION}
+
+$0 cluster                        Manage Kontena Pharos cluster
+
+Version selection search order:
+  - version-number option
+  - PHAROS_VERSION environment variable
+  - .pharos-version file in the current directory
+  - .pharos-version file in the current git repository root directory
+  - .pharos-version file in any of the parent directories of current directory
+EOF
+}
+
+function _pharos_subcommand_--version() {
+  echo "pharos ${PHAROS_VM_VERSION}"
+}
+
+function _pharos_subcommand_version() {
+  _pharos_subcommand_--version
+  if [ current_version != "" ]; then
+    echo ""
+    subcommand cluster version
+  else
+    echo "pharos-cluster version not selected"
+  fi
+}
+
+function remote_files() {
+  cat <<EOF
+cluster|darwin|amd64|s|1.1.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
+cluster|linux|amd64|p|1.1.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-linux-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
+cluster|darwin|amd64|s|1.1.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-darwin-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
+cluster|linux|amd64|s|1.1.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-linux-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
+cluster|darwin|amd64|p|1.1.0-rc.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-darwin-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
+cluster|linux|amd64|p|1.1.0-rc.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-linux-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
+cluster|darwin|amd64|s|1.0.6|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-darwin-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+cluster|linux|amd64|s|1.0.6|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-linux-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+cluster|darwin|amd64|s|1.0.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-darwin-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
+cluster|linux|amd64|s|1.0.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-linux-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
+EOF
+}
+
+function pv_is_installed() {
+  which pv > /dev/null
+}
+
+function download_url() {
+  local current_tool="$1"
+  local current_version="$2"
+  local current_cpu=$(cpu)
+  local current_os=$(os)
+
+  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+    if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ] && [ "${tool}" = "${current_tool}" ] && [ "${version}" = "${current_version}" ]; then
+      echo "${url}"
+      break
+    fi
+  done
+}
+
+function download_size() {
+  local current_url="$1"
+
+  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+    if [ "${url}" = "${current_url}" ]; then
+      echo "${size}"
+      break
+    fi
+  done
+}
+
+function download_shasum() {
+  local current_url="$1"
+
+  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+    if [ "${url}" = "${current_url}" ]; then
+      echo "${sha}"
+      break
+    fi
+  done
+}
+
+
+function get_wget() {
+  local url="$1"
+  local destination="$2"
+  local pv
+
+  if pv_is_installed; then
+    local size=$(download_size "${url}")
+    (wget -O "${url}" | pv -s ${size} > "${destination}") || error_exit "installation failed"
+  else
+    wget -O "${url}" > "${destination}" || error_exit "installation failed"
+  fi
+}
+
+function get_curl() {
+  local url="$1"
+  local destination="$2"
+
+  if pv_is_installed; then
+    local size=$(download_size "${url}")
+    (curl -sL "${url}" | pv -s ${size} > "${destination}") || error_exit "installation failed"
+  else
+    curl -sL "${url}" ${pv} > "${destination}" || error_exit "installation failed"
+  fi
+}
+
+function sha_verify() {
+  local file_path="$1"
+  local checksum="$2"
+  echo "${checksum}  $file_path" | shasum -a 256 -c - &> /dev/null
+}
+
+function _pharos_subcommand_install() {
+  local force
+
+  if [ "$1" = "--force" ]; then
+    force="true"
+    shift
+  fi
+
+  if [ "$2" = "--force" ]; then
+    force="true"
+  fi
+
+  local version="$1"
+  local tool="cluster"
+
+  if [ "$1" = "" ]; then
+    error_exit "missing version: use $0 install <version>"
+  fi
+
+  if version_is_installed "${tool}" "${version}" && [ "${force}" != "true" ]; then
+    echo "Already installed ${tool} version ${version}. Use --force to reinstall."
+    exit 0
+  fi
+
+  local url=$(download_url $tool $version)
+
+  if [ "${url}" = "" ]; then
+    error_exit "version ${version} not found for ${tool}, use: $0 list-remote to get a list of available versions."
+  fi
+
+  echo "Downloading from ${url}"
+  local destination=$(version_path ${tool} ${version})
+
+  mkdir -p "$PHAROS_BIN_ROOT" &> /dev/null
+
+  if which curl > /dev/null; then
+    get_curl "${url}" "${destination}"
+  elif which wget > /dev/null; then
+    get_wget "${url}" "${destination}"
+  else
+    error_exit "curl or wget required for installing"
+  fi
+
+  echo "Verifying download"
+  if sha_verify ${destination} $(download_shasum ${url}); then
+    chmod ug+x "${destination}"
+    echo "Installed ${tool} version ${version}"
+  else
+    rm -f "${destination}"
+    error_exit "Checksum verification failed"
+  fi
+}
+
+function _pharos_subcommand_uninstall() {
+  local version="$1"
+  local tool="cluster"
+
+  if [ "$1" = "" ]; then
+    error_exit "missing version: use $0 uninstall <version>"
+  fi
+
+  if version_is_installed "${tool}" "${version}" ]; then
+    rm -f $(version_path ${tool} ${version})
+  else
+    error_exit "not installed: ${tool} version ${version}"
+  fi
+}
+
+
+function _pharos_subcommand_use() {
+  export PHAROS_VERSION="$1"
+}
+
+function _pharos_subcommand_list-remote() {
+
+  local current_os=$(os)
+  local current_cpu=$(cpu)
+
+  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+    if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ]; then
+      if [ "${stable}" = "s" ] || [ "$1" = "--pre" ]; then
+        printf "* %-15s %-10s %s\n" "${tool}" "${version}" "${description}"
+      fi
+    fi
+  done
+}
+
+function subcommand() {
+
+  validate_external_tools
+
+  if [[ "$1" =~ ^[0-9].*$ ]]; then
+    PHAROS_VERSION=$1
+    shift
+  fi
+
+  if [ "$#" -eq 0 ]; then
+    eval _pharos_subcommand_--help
+  elif type -t "_pharos_subcommand_$1" | grep -q 'function'; then
+    local subcommand=$1
+    shift
+    _pharos_subcommand_$subcommand $*
+  else
+    local version=$(current_version)
+    local tool="$1"
+    shift
+    if [ "${version}" != "" ] && version_is_installed $tool $version; then
+      local executable=$(version_path ${tool} ${version})
+      exec "$executable" $*
+    elif [ "${version}" = "" ]; then
+      error_exit "version not selected, use $0 --help for usage instructions."
+    else
+      error_exit "Unknown subcommand '$1', use $0 --help for usage instructions."
+    fi
+  fi
+}
+
+subcommand $*
