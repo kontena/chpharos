@@ -81,7 +81,7 @@ $0 install [--force] <version>    Install Kontena Pharos version
 $0 uninstall <version>            Uninstall Kontena Pharos version
 $0 current                        Show the current Kontena Pharos version
 $0 list                           List installed Kontena Pharos versions
-$0 list-remote                    List remote Kontnea Pharos versions available for install
+$0 list-remote                    List remote Kontena Pharos versions available for install
 $0 version                        Show pharos and pharos-cluster version
 
 $0 --help                         Show this help
