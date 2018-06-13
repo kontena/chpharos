@@ -269,7 +269,16 @@ function _pharos_subcommand_uninstall() {
 
 
 function _pharos_subcommand_use() {
-  export PHAROS_VERSION="$1"
+  echo "does nothing"
+}
+
+function _pharos_subcommand_current() {
+  local current=$(current_version)
+  if [ "${current}" = "" ]; then
+    error_exit "no version selected"
+  else
+    echo "${current}"
+  fi
 }
 
 function _pharos_subcommand_list-remote() {
