@@ -3,7 +3,9 @@
 set -e
 
 PHAROS_VM_VERSION=0.1.0
-PHAROS_BIN_ROOT="$HOME/.pharos/bin"
+PHAROS_VM_ROOT="$HOME/.pharos"
+PHAROS_VM_BIN_ROOT="$PHAROS_VM_ROOT/bin"
+_pharos_version_origin=""
 
 function error_exit() {
   (>&2 echo "error: $1"); exit 1
@@ -37,23 +39,31 @@ function find_versionfile_ascending() {
 
 function current_version() {
   if [ "${PHAROS_VERSION}" != "" ]; then
-    echo "${PHAROS_VERSION}"
-  elif [ -f ".pharos-version" ]; then
-    cat .pharos-version
+    _pharos_version_origin="PHAROS_VERSION environment variable"
+    _pharos_version="${PHAROS_VERSION}"
+  elif [ -f "$PWD/.pharos-version" ]; then
+    _pharos_version_origin="$PWD/.pharos-version file"
+    _pharos_version=$(cat .pharos-version)
   elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
-    cat "$(git rev-parse --show-toplevel)/.pharos-version"
+    _pharos_version_origin="git repository root .pharos-version file"
+    _pharos_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
   else
     local ascending="$(find_versionfile_ascending)"
     if [ "${ascending}" != "" ]; then
-      cat "${ascending}"
+      _pharos_version_origin="${ascending} file"
+      _pharos_version=$(cat "${ascending}")
+    elif [ -f "${PHAROS_VM_ROOT}/current_version" ]; then
+      _pharos_version_origin="${PHAROS_VM_ROOT}/current_version file"
+      _pharos_version=$(cat "${PHAROS_VM_ROOT}/current_version")
     fi
   fi
+  echo "${_pharos_version}"
 }
 
 function version_path() {
   local tool=$1
   local version=$2
-  echo "${PHAROS_BIN_ROOT}/pharos-${tool}@${version}"
+  echo "${PHAROS_VM_BIN_ROOT}/pharos-${tool}@${version}"
 }
 
 function version_is_installed() {
@@ -95,6 +105,7 @@ Version selection search order:
   - .pharos-version file in the current directory
   - .pharos-version file in the current git repository root directory
   - .pharos-version file in any of the parent directories of current directory
+  - .pharos/current_version in the users home directory
 EOF
 }
 
@@ -218,6 +229,10 @@ function _pharos_subcommand_install() {
     error_exit "missing version: use $0 install <version>"
   fi
 
+  if [ "${version}" = "latest" ]; then
+    version=$(remote_files | head -1 | cut -d "|" -f 5)
+  fi
+
   if version_is_installed "${tool}" "${version}" && [ "${force}" != "true" ]; then
     echo "Already installed ${tool} version ${version}. Use --force to reinstall."
     exit 0
@@ -232,7 +247,7 @@ function _pharos_subcommand_install() {
   echo "Downloading from ${url}"
   local destination=$(version_path ${tool} ${version})
 
-  mkdir -p "$PHAROS_BIN_ROOT" &> /dev/null
+  mkdir -p "$PHAROS_VM_BIN_ROOT" &> /dev/null
 
   if which curl > /dev/null; then
     get_curl "${url}" "${destination}"
@@ -269,15 +284,37 @@ function _pharos_subcommand_uninstall() {
 
 
 function _pharos_subcommand_use() {
-  echo "does nothing"
+  local tool="cluster"
+  local destination=""
+  if [ "$1" = "--local" ]; then
+    destination=$PWD/.pharos-version
+    shift
+  else
+    destination="${PHAROS_VM_ROOT}/current_version"
+    mkdir -p "${PHAROS_VM_ROOT}" &> /dev/null
+  fi
+
+  local version="$1"
+
+  if version_is_installed "${tool}" "${version}"; then
+    echo "${version}" > "${destination}"
+    current_version > /dev/null
+    if [ "${_pharos_version}" != "${version}" ]; then
+      echo "${tool} version ${version} set as default, currently using ${_pharos_version} set via ${_pharos_version_origin}"
+    else
+      echo "Using ${tool} version ${version}"
+    fi
+  else
+    error_exit "${tool} version ${version} is not installed, use: $0 install ${version} to install"
+  fi
 }
 
 function _pharos_subcommand_current() {
-  local current=$(current_version)
-  if [ "${current}" = "" ]; then
+  current_version > /dev/null
+  if [ "${_pharos_version}" = "" ]; then
     error_exit "no version selected"
   else
-    echo "${current}"
+    echo "${_pharos_version} (set via ${_pharos_version_origin})"
   fi
 }
 
@@ -297,10 +334,11 @@ function _pharos_subcommand_list-remote() {
 
 function _pharos_subcommand_list() {
   local found=""
-  for binary in ${PHAROS_BIN_ROOT}/*; do
+  current_version > /dev/null
+  for binary in ${PHAROS_VM_BIN_ROOT}/*; do
     if [ -f "$binary" ]; then
       IFS="@" read -r tool version <<< "${binary}"
-      if [ "${version}" = "$(current_version)" ]; then
+      if [ "${version}" = "${_pharos_version}" ]; then
         echo "$(basename "${tool}") ${version} (current)"
       else
         echo "$(basename "${tool}") ${version}"
@@ -330,7 +368,8 @@ function subcommand() {
     shift
     _pharos_subcommand_$subcommand $*
   else
-    local version=$(current_version)
+    current_version > /dev/null
+    local version=${_pharos_version}
     local tool="$1"
     shift
     if [ "${version}" != "" ] && version_is_installed $tool $version; then
