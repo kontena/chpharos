@@ -86,12 +86,12 @@ function _pharos_subcommand_--help() {
   cat <<EOF
 Usage: $0 [version-number] <sub-command> <sub-command-options>
 
-$0 use <version>                  Set the current Kontena Pharos version
+$0 use [--local] <version>        Set the current Kontena Pharos version
 $0 install [--force] <version>    Install Kontena Pharos version
 $0 uninstall <version>            Uninstall Kontena Pharos version
 $0 current                        Show the current Kontena Pharos version
 $0 list                           List installed Kontena Pharos versions
-$0 list-remote                    List remote Kontena Pharos versions available for install
+$0 list-remote [--pre]            List remote Kontena Pharos versions available for install
 $0 version                        Show pharos and pharos-cluster version
 
 $0 --help                         Show this help
