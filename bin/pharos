@@ -6,6 +6,7 @@ PHAROS_VM_VERSION=0.1.0
 PHAROS_VM_ROOT="$HOME/.pharos"
 PHAROS_VM_BIN_ROOT="$PHAROS_VM_ROOT/bin"
 _pharos_version_origin=""
+PHAROS_CMD=$(basename $0)
 
 function error_exit() {
   (>&2 echo "error: $1"); exit 1
@@ -84,20 +85,20 @@ function validate_external_tools() {
 
 function _pharos_subcommand_--help() {
   cat <<EOF
-Usage: $0 [version-number] <sub-command> <sub-command-options>
+Usage: $PHAROS_CMD [version-number] <sub-command> <sub-command-options>
 
-$0 use [--local] <version>        Set the current Kontena Pharos version
-$0 install [--force] <version>    Install Kontena Pharos version
-$0 uninstall <version>            Uninstall Kontena Pharos version
-$0 current                        Show the current Kontena Pharos version
-$0 list                           List installed Kontena Pharos versions
-$0 list-remote [--pre]            List remote Kontena Pharos versions available for install
-$0 version                        Show pharos and pharos-cluster version
+$PHAROS_CMD use [--local] <version>        Set the current Kontena Pharos version
+$PHAROS_CMD install [--force] <version>    Install Kontena Pharos version
+$PHAROS_CMD uninstall <version>            Uninstall Kontena Pharos version
+$PHAROS_CMD current                        Show the current Kontena Pharos version
+$PHAROS_CMD list                           List installed Kontena Pharos versions
+$PHAROS_CMD list-remote [--pre]            List remote Kontena Pharos versions available for install
+$PHAROS_CMD version                        Show pharos and pharos-cluster version
 
-$0 --help                         Show this help
-$0 --version                      Show pharos version ${PHAROS_VM_VERSION}
+$PHAROS_CMD --help                         Show this help
+$PHAROS_CMD --version                      Show pharos version ${PHAROS_VM_VERSION}
 
-$0 cluster                        Manage Kontena Pharos cluster
+$PHAROS_CMD cluster                        Manage Kontena Pharos cluster
 
 Version selection search order:
   - version-number option
@@ -226,7 +227,7 @@ function _pharos_subcommand_install() {
   local tool="cluster"
 
   if [ "$1" = "" ]; then
-    error_exit "missing version: use $0 install <version>"
+    error_exit "missing version: use $PHAROS_CMD install <version>"
   fi
 
   if [ "${version}" = "latest" ]; then
@@ -241,7 +242,7 @@ function _pharos_subcommand_install() {
   local url=$(download_url $tool $version)
 
   if [ "${url}" = "" ]; then
-    error_exit "version ${version} not found for ${tool}, use: $0 list-remote to get a list of available versions."
+    error_exit "version ${version} not found for ${tool}, use: $PHAROS_CMD list-remote to get a list of available versions."
   fi
 
   echo "Downloading from ${url}"
@@ -272,7 +273,7 @@ function _pharos_subcommand_uninstall() {
   local tool="cluster"
 
   if [ "$1" = "" ]; then
-    error_exit "missing version: use $0 uninstall <version>"
+    error_exit "missing version: use $PHAROS_CMD uninstall <version>"
   fi
 
   if version_is_installed "${tool}" "${version}" ]; then
@@ -305,7 +306,7 @@ function _pharos_subcommand_use() {
       echo "Using ${tool} version ${version}"
     fi
   else
-    error_exit "${tool} version ${version} is not installed, use: $0 install ${version} to install"
+    error_exit "${tool} version ${version} is not installed, use: $PHAROS_CMD install ${version} to install"
   fi
 }
 
@@ -376,9 +377,9 @@ function subcommand() {
       local executable=$(version_path ${tool} ${version})
       exec "$executable" $*
     elif [ "${version}" = "" ]; then
-      error_exit "version not selected, use $0 --help for usage instructions."
+      error_exit "version not selected, use $PHAROS_CMD --help for usage instructions."
     else
-      error_exit "Unknown subcommand '$1', use $0 --help for usage instructions."
+      error_exit "Unknown subcommand '$1', use $PHAROS_CMD --help for usage instructions."
     fi
   fi
 }
