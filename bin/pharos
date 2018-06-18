@@ -126,16 +126,16 @@ function _pharos_subcommand_version() {
 
 function remote_files() {
   cat <<EOF
-cluster|darwin|amd64|s|1.1.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
-cluster|linux|amd64|p|1.1.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-linux-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
-cluster|darwin|amd64|s|1.1.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-darwin-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
-cluster|linux|amd64|s|1.1.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-linux-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
-cluster|darwin|amd64|p|1.1.0-rc.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-darwin-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
-cluster|linux|amd64|p|1.1.0-rc.1|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-linux-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
-cluster|darwin|amd64|s|1.0.6|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-darwin-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-cluster|linux|amd64|s|1.0.6|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-linux-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-cluster|darwin|amd64|s|1.0.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-darwin-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
-cluster|linux|amd64|s|1.0.0|Pharos cluster|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-linux-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
+1.1.1|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
+1.1.1|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-linux-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
+1.1.0|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-darwin-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
+1.1.0|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-linux-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
+1.1.0-rc.1|p|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-darwin-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
+1.1.0-rc.1|p|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-linux-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
+1.0.6|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-darwin-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+1.0.6|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-linux-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+1.0.0|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-darwin-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
+1.0.0|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-linux-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
 EOF
 }
 
@@ -144,13 +144,12 @@ function pv_is_installed() {
 }
 
 function download_url() {
-  local current_tool="$1"
-  local current_version="$2"
+  local current_version="$1"
   local current_cpu=$(cpu)
   local current_os=$(os)
 
-  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
-    if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ] && [ "${tool}" = "${current_tool}" ] && [ "${version}" = "${current_version}" ]; then
+  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
+    if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ] && [ "${version}" = "${current_version}" ]; then
       echo "${url}"
       break
     fi
@@ -160,7 +159,7 @@ function download_url() {
 function download_size() {
   local current_url="$1"
 
-  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
     if [ "${url}" = "${current_url}" ]; then
       echo "${size}"
       break
@@ -171,7 +170,7 @@ function download_size() {
 function download_shasum() {
   local current_url="$1"
 
-  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
     if [ "${url}" = "${current_url}" ]; then
       echo "${sha}"
       break
@@ -212,6 +211,8 @@ function sha_verify() {
 }
 
 function _pharos_subcommand_install() {
+  validate_external_tools
+
   local force
 
   if [ "$1" = "--force" ]; then
@@ -235,14 +236,14 @@ function _pharos_subcommand_install() {
   fi
 
   if version_is_installed "${tool}" "${version}" && [ "${force}" != "true" ]; then
-    echo "Already installed ${tool} version ${version}. Use --force to reinstall."
+    echo "Already installed version ${version}. Use --force to reinstall."
     exit 0
   fi
 
-  local url=$(download_url $tool $version)
+  local url=$(download_url $version)
 
   if [ "${url}" = "" ]; then
-    error_exit "version ${version} not found for ${tool}, use: $PHAROS_CMD list-remote to get a list of available versions."
+    error_exit "version ${version} not found, use: $PHAROS_CMD list-remote to get a list of available versions."
   fi
 
   echo "Downloading from ${url}"
@@ -261,7 +262,7 @@ function _pharos_subcommand_install() {
   echo "Verifying download"
   if sha_verify ${destination} $(download_shasum ${url}); then
     chmod ug+x "${destination}"
-    echo "Installed ${tool} version ${version}"
+    echo "Installed version ${version}"
   else
     rm -f "${destination}"
     error_exit "Checksum verification failed"
@@ -278,8 +279,9 @@ function _pharos_subcommand_uninstall() {
 
   if version_is_installed "${tool}" "${version}" ]; then
     rm -f $(version_path ${tool} ${version})
+    echo "Uninstalled version ${version}"
   else
-    error_exit "not installed: ${tool} version ${version}"
+    error_exit "version ${version} not installed"
   fi
 }
 
@@ -301,12 +303,12 @@ function _pharos_subcommand_use() {
     echo "${version}" > "${destination}"
     current_version > /dev/null
     if [ "${_pharos_version}" != "${version}" ]; then
-      echo "${tool} version ${version} set as default, currently using ${_pharos_version} set via ${_pharos_version_origin}"
+      echo "version ${version} set as default, currently using ${_pharos_version} set via ${_pharos_version_origin}"
     else
-      echo "Using ${tool} version ${version}"
+      echo "Using version ${version}"
     fi
   else
-    error_exit "${tool} version ${version} is not installed, use: $PHAROS_CMD install ${version} to install"
+    error_exit "version ${version} is not installed, use: $PHAROS_CMD install ${version} to install"
   fi
 }
 
@@ -320,14 +322,19 @@ function _pharos_subcommand_current() {
 }
 
 function _pharos_subcommand_list-remote() {
+  validate_external_tools
 
   local current_os=$(os)
   local current_cpu=$(cpu)
 
-  remote_files | while IFS="|" read -r tool os cpu stable version description url size sha; do
+  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
     if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ]; then
       if [ "${stable}" = "s" ] || [ "$1" = "--pre" ]; then
-        printf "* %-15s %-10s %s\n" "${tool}" "${version}" "${description}"
+        if version_is_installed "cluster" "${version}"; then
+          printf "* %-15s %-10s\n" "${version} (installed)"
+        else
+          printf "* %-15s %-10s\n" "${version}"
+        fi
       fi
     fi
   done
@@ -336,13 +343,13 @@ function _pharos_subcommand_list-remote() {
 function _pharos_subcommand_list() {
   local found=""
   current_version > /dev/null
-  for binary in ${PHAROS_VM_BIN_ROOT}/*; do
+  for binary in ${PHAROS_VM_BIN_ROOT}/pharos-cluster@*; do
     if [ -f "$binary" ]; then
       IFS="@" read -r tool version <<< "${binary}"
       if [ "${version}" = "${_pharos_version}" ]; then
-        echo "$(basename "${tool}") ${version} (current)"
+        echo "* ${version} (current)"
       else
-        echo "$(basename "${tool}") ${version}"
+        echo "* ${version}"
       fi
       found="true"
     fi
@@ -354,8 +361,6 @@ function _pharos_subcommand_list() {
 }
 
 function subcommand() {
-
-  validate_external_tools
 
   if [[ "$1" =~ ^[0-9].*$ ]]; then
     PHAROS_VERSION=$1
