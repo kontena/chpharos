@@ -192,36 +192,37 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-set -e
+CHPHAROS_VERSION=0.1.0
+CHPHAROS_ROOT="$HOME/.pharos/chpharos"
+CHPHAROS_VERSION_ROOT="$CHPHAROS_ROOT/versions"
+PHAROS_VERSIONS=()
+unset PHAROS_VERSION
 
-PHAROS_VM_VERSION=0.1.0
-PHAROS_VM_ROOT="$HOME/.pharos"
-PHAROS_VM_BIN_ROOT="$PHAROS_VM_ROOT/bin"
-_pharos_version_origin=""
-PHAROS_CMD=$(basename $0)
+_chpharos_scan() {
+  local unsorted_versions=()
+  local pharos_version
+  PHAROS_VERSIONS=()
 
-function error_exit() {
-  (>&2 echo "error: $1"); exit 1
+  for pharos_version in ${CHPHAROS_VERSION_ROOT}/*.*.*; do
+    if [ -d ${pharos_version} ]; then
+      if [ -z "${pharos_version##*-*}" ]; then
+        unsorted_versions+=("${pharos_version/$CHPHAROS_VERSION_ROOT\//}")
+      else
+        unsorted_versions+=("${pharos_version/$CHPHAROS_VERSION_ROOT\//}_")
+      fi
+    fi
+  done
+  unsorted_versions=($(sort -r <<< "${unsorted_versions[*]}"))
+  for pharos_version in ${unsorted_versions[*]}; do
+    if [ -z "${pharos_version##*_}" ]; then
+      PHAROS_VERSIONS+=("${pharos_version%_}")
+    else
+      PHAROS_VERSIONS+=("${pharos_version}")
+    fi
+  done
 }
 
-function os() {
-  if uname -s | grep -q Darwin; then
-    echo "darwin"
-  else
-    echo "linux"
-  fi
-}
-
-function cpu() {
-  local uname_m=$(uname -m)
-  case "${uname_m}" in
-    amd64)  echo "amd64" ;;
-    x86_64) echo "amd64" ;;
-    *) error_exit "Unsupported processor architecture" ;;
-  esac
-}
-
-function find_versionfile_ascending() {
+_chpharos_find_versionfile_ascending() {
   local current_path="$(pwd)"
 
   while ! [ -e "${current_path}/.pharos-version" ] && [ -n "${current_path}" ]; do
@@ -230,84 +231,152 @@ function find_versionfile_ascending() {
   [ -e "${current_path}/.pharos-version" ] && echo "${current_path}/.pharos-version"
 }
 
-function current_version() {
+_chpharos_set_current_version() {
   if [ "${PHAROS_VERSION}" != "" ]; then
-    _pharos_version_origin="PHAROS_VERSION environment variable"
-    _pharos_version="${PHAROS_VERSION}"
+    _chpharos_version_origin="PHAROS_VERSION environment variable"
+    _chpharos_version="${PHAROS_VERSION}"
   elif [ -f "$PWD/.pharos-version" ]; then
-    _pharos_version_origin="$PWD/.pharos-version file"
-    _pharos_version=$(cat .pharos-version)
+    _chpharos_version_origin="$PWD/.pharos-version file"
+    _chpharos_version=$(cat .pharos-version)
   elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
-    _pharos_version_origin="git repository root .pharos-version file"
-    _pharos_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
+    _chpharos_version_origin="git repository root .pharos-version file"
+    _chpharos_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
   else
     local ascending="$(find_versionfile_ascending)"
     if [ "${ascending}" != "" ]; then
-      _pharos_version_origin="${ascending} file"
-      _pharos_version=$(cat "${ascending}")
-    elif [ -f "${PHAROS_VM_ROOT}/current_version" ]; then
-      _pharos_version_origin="${PHAROS_VM_ROOT}/current_version file"
-      _pharos_version=$(cat "${PHAROS_VM_ROOT}/current_version")
+      _chpharos_version_origin="${ascending} file"
+      _chpharos_version=$(cat "${ascending}")
+    elif [ -f "${CHPHAROS_ROOT}/current_version" ]; then
+      _chpharos_version_origin="${CHPHAROS_ROOT}/current_version file"
+      _chpharos_version=$(cat "${CHPHAROS_ROOT}/current_version")
     fi
   fi
-  echo "${_pharos_version}"
+  echo "${_chpharos_version}"
 }
 
-function version_path() {
-  local tool=$1
-  local version=$2
-  echo "${PHAROS_VM_BIN_ROOT}/pharos-${tool}@${version}"
+_chpharos_error_echo() {
+  (>&2 echo "error: $1")
 }
 
-function version_is_installed() {
-  local tool="$1"
-  local version="$2"
+_chpharos_os() {
+  if uname -s | grep -q Darwin; then
+    echo "darwin"
+  else
+    echo "linux"
+  fi
+}
 
-  if [ -f "$(version_path $tool $version)" ]; then
+_chpharos_cpu() {
+  local uname_m=$(uname -m)
+  case "${uname_m}" in
+    amd64)  echo "amd64" ;;
+    x86_64) echo "amd64" ;;
+    *) _chpharos_error_echo "Unsupported processor architecture"; return 1 ;;
+  esac
+}
+
+_chpharos_version_root() {
+  local version="$1"
+  echo "${CHPHAROS_VERSION_ROOT}/${version}"
+}
+
+_chpharos_version_is_installed() {
+  local version="$1"
+  for item in "${PHAROS_VERSIONS[@]}"; do
+    if [ "${version}" = "$item" ]; then
+      local version_root="$(_chpharos_version_root "$version")"
+      [ -d "${version_root}" ] && [ ! -z "$(ls -A "${version_root}")" ] && return 0
+    fi
+  done
+  return 1
+}
+
+_chpharos_subcommand_reset() {
+  if [[ -z "$CHPHAROS_CURRENT_VERSION_ROOT" ]]; then
     return 0
   else
+    PATH=":$PATH:" # surround with :
+    PATH="${PATH//:$CHPHAROS_CURRENT_VERSION_ROOT:/:}" # remove current version path
+    PATH="${PATH#:}" # strip leading :
+    PATH="${PATH%:}" # strip trailing :
+    hash -r
+  fi
+}
+
+_chpharos_subcommand_use() {
+  local destination
+  case "$1" in
+    --help)
+      cat <<EOF
+chpharos use [--local|--default] <version>
+
+  Select current pharos version
+
+  --local   Create/update .pharos-version file in the current directory
+  --default Create/update .pharos-version file in \$HOME directory
+EOF
+      return 0
+      ;;
+    --local)
+      destination=".pharos-version"
+      shift
+      ;;
+    --default)
+      shift
+      destination="$HOME/.pharos-version"
+      ;;
+  esac
+  local version="$1"
+
+  if _chpharos_version_is_installed "${version}"; then
+    _chpharos_subcommand_reset
+
+    export PHAROS_VERSION="${version}"
+    export CHPHAROS_CURRENT_VERSION_ROOT="$(version_root "${version}")"
+    export PATH="${CHPHAROS_CURRENT_VERSION_ROOT}:$PATH"
+
+    hash -r
+
+    if [ ! -z "${destination}" ]; then
+      echo "${PHAROS_VERSION}" > ${destination}
+      echo "using pharos version ${version}, updated ${destination}"
+    else
+      echo "using pharos version ${version}"
+    fi
+  else
+    unset PHAROS_VERSION
+    _chpharos_error_echo "version ${version} not installed"
     return 1
   fi
 }
 
-function validate_external_tools() {
-  (which curl > /dev/null || which wget > /dev/null) || error_exit "curl or wget not installed"
-  which shasum > /dev/null || error_exit "shasum not installed"
+_chpharos_validate_external_tools() {
+  (which curl > /dev/null || which wget > /dev/null) || (_chpharos_error_echo "curl or wget not installed"; return 1)
+  which shasum > /dev/null || (_chpharos_error_echo "shasum not installed"; return 1)
 }
 
-function _pharos_subcommand_--help() {
+_chpharos_subcommand_--help() {
   cat <<EOF
-Usage: $PHAROS_CMD [version-number] <sub-command> <sub-command-options>
+Usage: chpharos <sub-command> <sub-command-options>
 
-$PHAROS_CMD use [--local] <version>        Set the current Kontena Pharos version
-$PHAROS_CMD install [--force] <version>    Install Kontena Pharos version
-$PHAROS_CMD uninstall <version>            Uninstall Kontena Pharos version
-$PHAROS_CMD current                        Show the current Kontena Pharos version
-$PHAROS_CMD list                           List installed Kontena Pharos versions
-$PHAROS_CMD list-remote [--pre]            List remote Kontena Pharos versions available for install
-$PHAROS_CMD version                        Show pharos and pharos-cluster version
+chpharos use [--local] <version>            Set the current Kontena Pharos version
+chpharos install [--force] <version|latest> Install Kontena Pharos version
+chpharos uninstall <version>                Uninstall Kontena Pharos version
+chpharos current [--all]                    Show the current Kontena Pharos version
+chpharos list                               List installed Kontena Pharos versions
+chpharos list-remote [--pre]                List remote Kontena Pharos versions available for install
 
-$PHAROS_CMD --help                         Show this help
-$PHAROS_CMD --version                      Show pharos version ${PHAROS_VM_VERSION}
-
-$PHAROS_CMD cluster                        Manage Kontena Pharos cluster
-
-Version selection search order:
-  - version-number option
-  - PHAROS_VERSION environment variable
-  - .pharos-version file in the current directory
-  - .pharos-version file in the current git repository root directory
-  - .pharos-version file in any of the parent directories of current directory
-  - .pharos/current_version in the users home directory
+chpharos --help                             Show this help
+chpharos --version                          Show chpharos version ${CHPHAROS_VERSION}
 EOF
 }
 
-function _pharos_subcommand_--version() {
-  echo "pharos ${PHAROS_VM_VERSION}"
+_chpharos_subcommand_--version() {
+  echo "pharos ${CHPHAROS_VERSION}"
 }
 
-function _pharos_subcommand_version() {
-  _pharos_subcommand_--version
+_chpharos_subcommand_version() {
+  _chpharos_subcommand_--version
   if [ current_version != "" ]; then
     echo ""
     subcommand cluster version
@@ -316,9 +385,49 @@ function _pharos_subcommand_version() {
   fi
 }
 
-function remote_files() {
+_chpharos_pv_is_installed() {
+  which pv > /dev/null
+}
+
+get_wget() {
+  local url="$1"
+  local destination="$2"
+  local size="$3"
+
+  if _chpharos_pv_is_installed; then
+    (wget -O "${url}" | pv -s ${size} > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+  else
+    wget -O "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+  fi
+}
+
+get_curl() {
+  local url="$1"
+  local destination="$2"
+  local size="$3"
+
+  if _chpharos_pv_is_installed; then
+    (curl -sL "${url}" | pv -s ${size} > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+  else
+    curl -sL "${url}" ${pv} > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+  fi
+}
+
+sha_verify() {
+  local file_path="$1"
+  local checksum="$2"
+  echo "${checksum}  $file_path" | shasum -a 256 -c - &> /dev/null
+}
+
+
+# First level fields are separated by |
+# version|is_stable|os|cpu|urls
+#
+# The urls field is separated by ;
+# fname;size;sha;url;fname;size;sha;url;fname;size;sha;url;fname;size;sha;url
+_chpharos_remote_files() {
   cat <<EOF
-1.1.1|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
+1.1.1|s|darwin|amd64|pharos-cluster|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64;kubectl|53860176|10629291bb44e809611d4946ec1ccbb6b11602c5bffc3b11f84c4e2e80a39e58|https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/darwin/amd64/kubectl
 1.1.1|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-linux-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
 1.1.0|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-darwin-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
 1.1.0|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-linux-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
@@ -331,79 +440,19 @@ function remote_files() {
 EOF
 }
 
-function pv_is_installed() {
-  which pv > /dev/null
-}
-
-function download_url() {
-  local current_version="$1"
-  local current_cpu=$(cpu)
-  local current_os=$(os)
-
-  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
-    if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ] && [ "${version}" = "${current_version}" ]; then
-      echo "${url}"
-      break
+_chpharos_remote_version_url_data() {
+  local search_version="$1"
+  local search_os="$(_chpharos_os)"
+  local search_cpu="$(_chpharos_cpu)"
+  _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
+    if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ] && [ "${version}" = "${search_version}" ]; then
+      echo "${url_data//\;/\n}"
     fi
   done
 }
 
-function download_size() {
-  local current_url="$1"
-
-  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
-    if [ "${url}" = "${current_url}" ]; then
-      echo "${size}"
-      break
-    fi
-  done
-}
-
-function download_shasum() {
-  local current_url="$1"
-
-  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
-    if [ "${url}" = "${current_url}" ]; then
-      echo "${sha}"
-      break
-    fi
-  done
-}
-
-
-function get_wget() {
-  local url="$1"
-  local destination="$2"
-  local pv
-
-  if pv_is_installed; then
-    local size=$(download_size "${url}")
-    (wget -O "${url}" | pv -s ${size} > "${destination}") || error_exit "installation failed"
-  else
-    wget -O "${url}" > "${destination}" || error_exit "installation failed"
-  fi
-}
-
-function get_curl() {
-  local url="$1"
-  local destination="$2"
-
-  if pv_is_installed; then
-    local size=$(download_size "${url}")
-    (curl -sL "${url}" | pv -s ${size} > "${destination}") || error_exit "installation failed"
-  else
-    curl -sL "${url}" ${pv} > "${destination}" || error_exit "installation failed"
-  fi
-}
-
-function sha_verify() {
-  local file_path="$1"
-  local checksum="$2"
-  echo "${checksum}  $file_path" | shasum -a 256 -c - &> /dev/null
-}
-
-function _pharos_subcommand_install() {
-  validate_external_tools
+_chpharos_subcommand_install() {
+  _chpharos_validate_external_tools || return 1
 
   local force
 
@@ -417,112 +466,118 @@ function _pharos_subcommand_install() {
   fi
 
   local version="$1"
-  local tool="cluster"
 
   if [ "$1" = "" ]; then
-    error_exit "missing version: use $PHAROS_CMD install <version>"
+    _chpharos_error_echo "missing version: use chpharos install <version>"; return 1
   fi
 
   if [ "${version}" = "latest" ]; then
-    version=$(remote_files | head -1 | cut -d "|" -f 5)
+    version=$(remote_files | head -1 | cut -d "|" -f 1)
   fi
 
-  if version_is_installed "${tool}" "${version}" && [ "${force}" != "true" ]; then
+  if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
     echo "Already installed version ${version}. Use --force to reinstall."
-    exit 0
+    return 0
   fi
 
-  local url=$(download_url $version)
+  local destination_dir="$(_chpharos_version_root "${version}")"
+  mkdir -p "${destination_dir}" &> /dev/null
 
-  if [ "${url}" = "" ]; then
-    error_exit "version ${version} not found, use: $PHAROS_CMD list-remote to get a list of available versions."
-  fi
+  _chpharos_remote_version_url_data "${version}" | while IFS="|" read -r dl_filename dl_size dl_sha256 dl_url; do
+    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url}"
 
-  echo "Downloading from ${url}"
-  local destination=$(version_path ${tool} ${version})
+    local destination="${destination_dir}/${dl_filename}"
 
-  mkdir -p "$PHAROS_VM_BIN_ROOT" &> /dev/null
-
-  if which curl > /dev/null; then
-    get_curl "${url}" "${destination}"
-  elif which wget > /dev/null; then
-    get_wget "${url}" "${destination}"
-  else
-    error_exit "curl or wget required for installing"
-  fi
-
-  echo "Verifying download"
-  if sha_verify ${destination} $(download_shasum ${url}); then
-    chmod ug+x "${destination}"
-    echo "Installed version ${version}"
-  else
-    rm -f "${destination}"
-    error_exit "Checksum verification failed"
-  fi
-}
-
-function _pharos_subcommand_uninstall() {
-  local version="$1"
-  local tool="cluster"
-
-  if [ "$1" = "" ]; then
-    error_exit "missing version: use $PHAROS_CMD uninstall <version>"
-  fi
-
-  if version_is_installed "${tool}" "${version}" ]; then
-    rm -f $(version_path ${tool} ${version})
-    echo "Uninstalled version ${version}"
-  else
-    error_exit "version ${version} not installed"
-  fi
-}
-
-
-function _pharos_subcommand_use() {
-  local tool="cluster"
-  local destination=""
-  if [ "$1" = "--local" ]; then
-    destination=$PWD/.pharos-version
-    shift
-  else
-    destination="${PHAROS_VM_ROOT}/current_version"
-    mkdir -p "${PHAROS_VM_ROOT}" &> /dev/null
-  fi
-
-  local version="$1"
-
-  if version_is_installed "${tool}" "${version}"; then
-    echo "${version}" > "${destination}"
-    current_version > /dev/null
-    if [ "${_pharos_version}" != "${version}" ]; then
-      echo "version ${version} set as default, currently using ${_pharos_version} set via ${_pharos_version_origin}"
+    if which curl > /dev/null; then
+      get_curl "${dl_url}" "${destination}" "${dl_size}"
+    elif which wget > /dev/null; then
+      get_wget "${dl_url}" "${destination}" "${dl_size}"
     else
-      echo "Using version ${version}"
+      rmdir "${destination_dir}" &> /dev/null
+      _chpharos_error_echo "curl or wget required for installing"; return 1
+    fi
+
+    [ -f "${destination}" ] || continue
+
+    echo "Verifying download"
+
+    if sha_verify "${destination}" "${dl_sha256}"; then
+      chmod ug+x "${destination}"
+    else
+      rm -f "${destination}"
+      _chpharos_error_echo "checksum verification failed"
+    fi
+  done
+
+  if [ ! -d "${destination_dir}" ] || [ -z "$(ls -A "${destination_dir}")" ]; then
+    [ -d "${destination_dir}" ] && rm -rf "${destination_dir}"
+    _chpharos_error_echo "installation failed, use: chpharos list-remote to get a list of available versions."; return 1
+  else
+    echo "Installed version ${version}"
+    _chpharos_scan &> /dev/null
+  fi
+}
+
+_chpharos_subcommand_uninstall() {
+  local version="$1"
+
+  if [ -z "$1" ]; then
+    _chpharos_error_echo "missing version: use chpharos uninstall <version>"; return 1
+  fi
+
+  if _chpharos_version_is_installed "${version}" ]; then
+    rm -rf "$(_chpharos_version_root "${version}")"
+    echo "Uninstalled version ${version}"
+    _chpharos_scan &> /dev/null
+  else
+    _chpharos_error_echo "version ${version} not installed"; return 1
+  fi
+}
+
+_chpharos_subcommand_current() {
+  local debug
+  local full
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --debug) debug="true" ;;
+      --all) full="true" ;;
+      --help) cat <<EOF
+chpharos current [--debug] [--all]
+
+ --debug   Display how the current version was selected
+ --all     List versions of all utilities in the bundle
+EOF
+      return 0
+      ;;
+    esac
+    shift
+  done
+
+  if [ -z "${PHAROS_VERSION}" ]; then
+    _chpharos_error_echo "no version selected"; return 1
+  elif [ ! -z "${full}" ]; then
+    _chpharos_subcommand_info "${PHAROS_VERSION}"
+  elif [ ! -z "${debug}" ]; then
+    if [ -z "${_chpharos_version_origin}" ]; then
+      echo "${PHAROS_VERSION} (set via PHAROS_VERSION environment variable)"
+    else
+      echo "${PHAROS_VERSION} (set via ${_chpharos_version_origin})"
     fi
   else
-    error_exit "version ${version} is not installed, use: $PHAROS_CMD install ${version} to install"
+    echo "${PHAROS_VERSION}"
   fi
 }
 
-function _pharos_subcommand_current() {
-  current_version > /dev/null
-  if [ "${_pharos_version}" = "" ]; then
-    error_exit "no version selected"
-  else
-    echo "${_pharos_version} (set via ${_pharos_version_origin})"
-  fi
-}
+_chpharos_subcommand_list-remote() {
+  _chpharos_validate_external_tools || return 1
 
-function _pharos_subcommand_list-remote() {
-  validate_external_tools
+  local search_os=$(_chpharos_os)
+  local search_cpu=$(_chpharos_cpu)
 
-  local current_os=$(os)
-  local current_cpu=$(cpu)
-
-  remote_files | while IFS="|" read -r version stable os cpu url size sha; do
-    if [ "${os}" = "${current_os}" ] && [ "${cpu}" = "${current_cpu}" ]; then
+  remote_files | while IFS="|" read -r version stable os cpu url_data; do
+    if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ]; then
       if [ "${stable}" = "s" ] || [ "$1" = "--pre" ]; then
-        if version_is_installed "cluster" "${version}"; then
+        if _chpharos_version_is_installed "${version}"; then
           printf "* %-15s %-10s\n" "${version} (installed)"
         else
           printf "* %-15s %-10s\n" "${version}"
@@ -532,53 +587,47 @@ function _pharos_subcommand_list-remote() {
   done
 }
 
-function _pharos_subcommand_list() {
-  local found=""
-  current_version > /dev/null
-  for binary in ${PHAROS_VM_BIN_ROOT}/pharos-cluster@*; do
-    if [ -f "$binary" ]; then
-      IFS="@" read -r tool version <<< "${binary}"
-      if [ "${version}" = "${_pharos_version}" ]; then
-        echo "* ${version} (current)"
+_chpharos_subcommand_list() {
+  local version
+  _chpharos_scan &> /dev/null
+  if [ "${#PHAROS_VERSIONS[@]}" ]; then
+    for version in ${PHAROS_VERSIONS}; do
+      if [ "${version}" = "${PHAROS_VERSION}" ]; then
+        echo "${version} (current)"
       else
-        echo "* ${version}"
+        echo "${version}"
       fi
-      found="true"
-    fi
-  done
-
-  if [ "${found}" != "true" ]; then
+    done
+  else
     echo "Nothing installed"
   fi
 }
 
-function subcommand() {
+_chpharos_subcommand_ls() {
+  _chpharos_subcommand_list $@
+}
 
-  if [[ "$1" =~ ^[0-9].*$ ]]; then
-    PHAROS_VERSION=$1
-    shift
-  fi
+_chpharos_subcommand_ls-remote() {
+  _chpharos_subcommand_list-remote $@
+}
 
+chpharos() {
   if [ "$#" -eq 0 ]; then
-    eval _pharos_subcommand_--help
-  elif type -t "_pharos_subcommand_$1" | grep -q 'function'; then
+    eval _chpharos_subcommand_--help
+  elif type "_chpharos_subcommand_$1" | grep -q 'function'; then
     local subcommand=$1
     shift
-    _pharos_subcommand_$subcommand $*
+    _chpharos_subcommand_$subcommand $*
   else
-    current_version > /dev/null
-    local version=${_pharos_version}
-    local tool="$1"
-    shift
-    if [ "${version}" != "" ] && version_is_installed $tool $version; then
-      local executable=$(version_path ${tool} ${version})
-      exec "$executable" $*
-    elif [ "${version}" = "" ]; then
-      error_exit "version not selected, use $PHAROS_CMD --help for usage instructions."
-    else
-      error_exit "Unknown subcommand '$1', use $PHAROS_CMD --help for usage instructions."
-    fi
+    _chpharos_error_echo "unknown subcommand $1"; return 1
   fi
 }
 
-subcommand $*
+_chpharos_subcommand_reset
+_chpharos_scan
+_chpharos_set_current_version &> /dev/null
+PHAROS_VERSION="${_chpharos_version}"
+if [ ! -z "${PHAROS_VERSION}" ]; then
+  _chpharos_subcommand_use "${PHAROS_VERSION}" > /dev/null
+fi
+
