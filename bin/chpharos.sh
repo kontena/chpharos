@@ -192,7 +192,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-CHPHAROS_VERSION=0.1.0
+CHPHAROS_VERSION=0.1.0.pre
 CHPHAROS_ROOT="$HOME/.pharos/chpharos"
 CHPHAROS_VERSION_ROOT="$CHPHAROS_ROOT/versions"
 PHAROS_VERSIONS=()
@@ -372,17 +372,11 @@ EOF
 }
 
 _chpharos_subcommand_--version() {
-  echo "pharos ${CHPHAROS_VERSION}"
+  echo "chpharos ${CHPHAROS_VERSION}"
 }
 
 _chpharos_subcommand_version() {
-  _chpharos_subcommand_--version
-  if [ current_version != "" ]; then
-    echo ""
-    subcommand cluster version
-  else
-    echo "pharos-cluster version not selected"
-  fi
+  _chpharos_subcommand_current
 }
 
 _chpharos_pv_is_installed() {
@@ -416,15 +410,15 @@ get_curl() {
 sha_verify() {
   local file_path="$1"
   local checksum="$2"
-  echo "${checksum}  $file_path" | shasum -a 256 -c - &> /dev/null
+  echo "${checksum}  ${file_path}" | shasum -a 256 -c - &> /dev/null
 }
 
 
 # First level fields are separated by |
 # version|is_stable|os|cpu|urls
 #
-# The urls field is separated by ;
-# fname;size;sha;url;fname;size;sha;url;fname;size;sha;url;fname;size;sha;url
+# The url_data field is separated by ;
+# fname|size|sha|url;fname2|size2|sha2|url2
 _chpharos_remote_files() {
   cat <<EOF
 1.1.1|s|darwin|amd64|pharos-cluster|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64;kubectl|53860176|10629291bb44e809611d4946ec1ccbb6b11602c5bffc3b11f84c4e2e80a39e58|https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/darwin/amd64/kubectl
@@ -506,6 +500,10 @@ _chpharos_subcommand_install() {
     else
       rm -f "${destination}"
       _chpharos_error_echo "checksum verification failed"
+    fi
+
+    if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
+      ln -s "${destination_dir}/pharos-cluster" "${destination_dir}/pharos"
     fi
   done
 
