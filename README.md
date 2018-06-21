@@ -47,12 +47,12 @@ To install the latest version, use `chpharos install latest`
 
 ## Installation
 
-1. Download the [chpharos.sh](https://raw.githubusercontent.com/kontena/chpharos/master/bin/chpharos.sh)
+1. Download the [chpharos.sh](https://raw.githubusercontent.com/kontena/chpharos/master/share/chpharos.sh)
 2. Add a line to your shell's start-up configuration file (`.bash_profile`, `.zshrc`, ..) to load it: `source <path-to-chpharos.sh>`
 
 ```
 mkdir -p ~/.pharos/chpharos && \
-  curl -sL https://raw.githubusercontent.com/kontena/chpharos/master/bin/chpharos.sh > ~/.pharos/chpharos.sh && \
+  curl -sL https://raw.githubusercontent.com/kontena/chpharos/master/share/chpharos.sh > ~/.pharos/chpharos.sh && \
   echo "source ~/.pharos/chpharos.sh" >> ~/.bash_profile
 ```
 
