@@ -194,7 +194,6 @@
 
 CHPHAROS_VERSION=0.1.0.pre
 CHPHAROS_ROOT="$HOME/.pharos/chpharos"
-CHPHAROS_VERSION_ROOT="$CHPHAROS_ROOT/versions"
 PHAROS_VERSIONS=()
 unset PHAROS_VERSION
 
@@ -203,12 +202,12 @@ _chpharos_scan() {
   local pharos_version
   PHAROS_VERSIONS=()
 
-  for pharos_version in ${CHPHAROS_VERSION_ROOT}/*.*.*; do
+  for pharos_version in ${CHPHAROS_ROOT}/versions/*.*.*; do
     if [ -d ${pharos_version} ]; then
       if [ -z "${pharos_version##*-*}" ]; then
-        unsorted_versions+=("${pharos_version/$CHPHAROS_VERSION_ROOT\//}")
+        unsorted_versions+=("${pharos_version/$CHPHAROS_ROOT\/versions\//}")
       else
-        unsorted_versions+=("${pharos_version/$CHPHAROS_VERSION_ROOT\//}_")
+        unsorted_versions+=("${pharos_version/$CHPHAROS_ROOT\/versions\//}_")
       fi
     fi
   done
@@ -231,27 +230,30 @@ _chpharos_find_versionfile_ascending() {
   [ -e "${current_path}/.pharos-version" ] && echo "${current_path}/.pharos-version"
 }
 
-_chpharos_set_current_version() {
+_chpharos_auto() {
+  local auto_version
   if [ "${PHAROS_VERSION}" != "" ]; then
-    _chpharos_version_origin="PHAROS_VERSION environment variable"
-    _chpharos_version="${PHAROS_VERSION}"
+    _chpharos_auto_version_origin="PHAROS_VERSION environment variable"
+    auto_version="${PHAROS_VERSION}"
   elif [ -f "$PWD/.pharos-version" ]; then
-    _chpharos_version_origin="$PWD/.pharos-version file"
-    _chpharos_version=$(cat .pharos-version)
+    _chpharos_auto_version_origin="$PWD/.pharos-version file"
+    auto_version=$(cat .pharos-version)
   elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
-    _chpharos_version_origin="git repository root .pharos-version file"
-    _chpharos_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
+    _chpharos_auto_version_origin="git repository root .pharos-version file"
+    auto_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
   else
-    local ascending="$(find_versionfile_ascending)"
+    local ascending="$(_chpharos_find_versionfile_ascending)"
     if [ "${ascending}" != "" ]; then
-      _chpharos_version_origin="${ascending} file"
-      _chpharos_version=$(cat "${ascending}")
-    elif [ -f "${CHPHAROS_ROOT}/current_version" ]; then
-      _chpharos_version_origin="${CHPHAROS_ROOT}/current_version file"
-      _chpharos_version=$(cat "${CHPHAROS_ROOT}/current_version")
+      _chpharos_auto_version_origin="${ascending} file"
+      auto_version=$(cat "${ascending}")
     fi
   fi
-  echo "${_chpharos_version}"
+
+  if [ ! -z "${auto_version}" ]; then
+    local old_origin="${_chpharos_auto_version_origin}"
+    _chpharos_subcommand_use "${auto_version}" > /dev/null
+    _chpharos_auto_version_origin="${old_origin}"
+  fi
 }
 
 _chpharos_error_echo() {
@@ -275,16 +277,11 @@ _chpharos_cpu() {
   esac
 }
 
-_chpharos_version_root() {
-  local version="$1"
-  echo "${CHPHAROS_VERSION_ROOT}/${version}"
-}
-
 _chpharos_version_is_installed() {
   local version="$1"
   for item in "${PHAROS_VERSIONS[@]}"; do
     if [ "${version}" = "$item" ]; then
-      local version_root="$(_chpharos_version_root "$version")"
+      local version_root="${CHPHAROS_ROOT}/versions/${version}"
       [ -d "${version_root}" ] && [ ! -z "$(ls -A "${version_root}")" ] && return 0
     fi
   done
@@ -292,16 +289,27 @@ _chpharos_version_is_installed() {
 }
 
 _chpharos_subcommand_reset() {
-  if [[ -z "$CHPHAROS_CURRENT_VERSION_ROOT" ]]; then
-    return 0
-  else
-    PATH=":$PATH:" # surround with :
-    PATH="${PATH//:$CHPHAROS_CURRENT_VERSION_ROOT:/:}" # remove current version path
-    PATH="${PATH#:}" # strip leading :
-    PATH="${PATH%:}" # strip trailing :
-    hash -r
-  fi
+  local current_version=$(_chpharos_current_version_from_path)
+  [ -z "${current_version}" ] && return 0
+  local current_version_root="${CHPHAROS_ROOT}/versions/${current_version}"
+  PATH=":$PATH:" # surround with :
+  PATH="${PATH//:$current_version_root:/:}" # remove current version path
+  PATH="${PATH#:}" # strip leading :
+  PATH="${PATH%:}" # strip trailing :
+  hash -r
 }
+
+_chpharos_current_version_from_path() {
+  local path=":${PATH}:"
+  local remaining="${path}"
+  remaining="${remaining#:$CHPHAROS_ROOT*:}"
+  remaining="${path%$remaining}"
+  remaining="${remaining#:}"
+  remaining="${remaining%:}"
+  remaining="${remaining#*versions/}"
+  echo "${remaining}"
+}
+
 
 _chpharos_subcommand_use() {
   local destination
@@ -325,15 +333,17 @@ EOF
       shift
       destination="$HOME/.pharos-version"
       ;;
+    "")
+      _chpharos_error_echo "missing version"; return 1
+      ;;
   esac
   local version="$1"
 
   if _chpharos_version_is_installed "${version}"; then
     _chpharos_subcommand_reset
 
-    export PHAROS_VERSION="${version}"
-    export CHPHAROS_CURRENT_VERSION_ROOT="$(_chpharos_version_root "${version}")"
-    export PATH="${CHPHAROS_CURRENT_VERSION_ROOT}:$PATH"
+    export PATH="${CHPHAROS_ROOT}/versions/${version}:$PATH"
+    _chpharos_auto_version_origin="chpharos use command"
 
     hash -r
 
@@ -474,7 +484,7 @@ _chpharos_subcommand_install() {
     return 0
   fi
 
-  local destination_dir="$(_chpharos_version_root "${version}")"
+  local destination_dir="${CHPHAROS_ROOT}/versions/${version}"
   mkdir -p "${destination_dir}" &> /dev/null
 
   _chpharos_remote_version_url_data "${version}" | while IFS="|" read -r dl_filename dl_size dl_sha256 dl_url; do
@@ -519,12 +529,14 @@ _chpharos_subcommand_install() {
 _chpharos_subcommand_uninstall() {
   local version="$1"
 
+  [ -z "${CHPHAROS_ROOT}"] && return 1
+
   if [ -z "$1" ]; then
     _chpharos_error_echo "missing version: use chpharos uninstall <version>"; return 1
   fi
 
   if _chpharos_version_is_installed "${version}" ]; then
-    rm -rf "$(_chpharos_version_root "${version}")"
+    rm -rf "${CHPHAROS_ROOT}/versions/${version}"
     echo "Uninstalled version ${version}"
     _chpharos_scan &> /dev/null
   else
@@ -532,17 +544,38 @@ _chpharos_subcommand_uninstall() {
   fi
 }
 
+_chpharos_subcommand_info() {
+  local version="$1"
+
+  if [ -z "${version}" ]; then
+    _chpharos_error_echo "missing version"
+    return 1
+  fi
+
+  if _chpharos_version_is_installed "${version}"; then
+    _chpharos_subcommand_--version
+    for file in ${CHPHAROS_ROOT}/versions/${version}/*; do
+      if [ -e "$file" ]; then
+        echo "$file:"
+        $file version || $file --version || echo "$file does not report a version number"
+      fi
+    done
+  else
+    _chpharos_error_echo "no such version"; return 1
+  fi
+}
+
 _chpharos_subcommand_current() {
-  local debug
   local full
+  local short
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --debug) debug="true" ;;
       --all) full="true" ;;
+      --short) short="true" ;;
       --help) cat <<EOF
 chpharos current [--debug] [--all]
 
- --debug   Display how the current version was selected
+ --short   Do not display the "set via ..." version origin
  --all     List versions of all utilities in the bundle
 EOF
       return 0
@@ -551,18 +584,20 @@ EOF
     shift
   done
 
-  if [ -z "${PHAROS_VERSION}" ]; then
+  local version=$(_chpharos_current_version_from_path)
+
+  if [ -z "${version}" ]; then
     _chpharos_error_echo "no version selected"; return 1
   elif [ ! -z "${full}" ]; then
-    _chpharos_subcommand_info "${PHAROS_VERSION}"
-  elif [ ! -z "${debug}" ]; then
-    if [ -z "${_chpharos_version_origin}" ]; then
-      echo "${PHAROS_VERSION} (set via PHAROS_VERSION environment variable)"
-    else
-      echo "${PHAROS_VERSION} (set via ${_chpharos_version_origin})"
-    fi
+    _chpharos_subcommand_info "${version}" || return 1
+  elif [ ! -z "${short}" ]; then
+    echo "${version}"
   else
-    echo "${PHAROS_VERSION}"
+    if [ -z "${_chpharos_auto_version_origin}" ]; then
+      echo "${version} (set via chpharos use command)"
+    else
+      echo "${version} (set via ${_chpharos_auto_version_origin})"
+    fi
   fi
 }
 
@@ -609,6 +644,16 @@ _chpharos_subcommand_ls-remote() {
   _chpharos_subcommand_list-remote $@
 }
 
+_chpharos_subcommand_auto() {
+  if [[ -n "$ZSH_VERSION" ]]; then
+    if [[ ! "$preexec_functions" == *_chpharos_auto* ]]; then
+      preexec_functions+=("_chpharos_auto")
+    fi
+  elif [[ -n "$BASH_VERSION" ]]; then
+    trap '[[ "$BASH_COMMAND" != "$PROMPT_COMMAND" ]] && _chpharos_auto' DEBUG
+  fi
+}
+
 chpharos() {
   if [ "$#" -eq 0 ]; then
     eval _chpharos_subcommand_--help
@@ -623,9 +668,4 @@ chpharos() {
 
 _chpharos_subcommand_reset
 _chpharos_scan
-_chpharos_set_current_version &> /dev/null
-PHAROS_VERSION="${_chpharos_version}"
-if [ ! -z "${PHAROS_VERSION}" ]; then
-  _chpharos_subcommand_use "${PHAROS_VERSION}" > /dev/null
-fi
-
+_chpharos_auto &> /dev/null
