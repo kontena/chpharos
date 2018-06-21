@@ -383,7 +383,7 @@ _chpharos_pv_is_installed() {
   which pv > /dev/null
 }
 
-get_wget() {
+_chpharos_get_wget() {
   local url="$1"
   local destination="$2"
   local size="$3"
@@ -395,7 +395,7 @@ get_wget() {
   fi
 }
 
-get_curl() {
+_chpharos_get_curl() {
   local url="$1"
   local destination="$2"
   local size="$3"
@@ -407,7 +407,7 @@ get_curl() {
   fi
 }
 
-sha_verify() {
+_chpharos_sha_verify() {
   local file_path="$1"
   local checksum="$2"
   echo "${checksum}  ${file_path}" | shasum -a 256 -c - &> /dev/null
@@ -483,9 +483,9 @@ _chpharos_subcommand_install() {
     local destination="${destination_dir}/${dl_filename}"
 
     if which curl > /dev/null; then
-      get_curl "${dl_url}" "${destination}" "${dl_size}"
+      _chpharos_get_curl "${dl_url}" "${destination}" "${dl_size}"
     elif which wget > /dev/null; then
-      get_wget "${dl_url}" "${destination}" "${dl_size}"
+      _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
     else
       rmdir "${destination_dir}" &> /dev/null
       _chpharos_error_echo "curl or wget required for installing"; return 1
@@ -495,7 +495,7 @@ _chpharos_subcommand_install() {
 
     echo "Verifying download"
 
-    if sha_verify "${destination}" "${dl_sha256}"; then
+    if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
       chmod ug+x "${destination}"
     else
       rm -f "${destination}"
