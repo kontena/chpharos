@@ -332,7 +332,7 @@ EOF
     _chpharos_subcommand_reset
 
     export PHAROS_VERSION="${version}"
-    export CHPHAROS_CURRENT_VERSION_ROOT="$(version_root "${version}")"
+    export CHPHAROS_CURRENT_VERSION_ROOT="$(_chpharos_version_root "${version}")"
     export PATH="${CHPHAROS_CURRENT_VERSION_ROOT}:$PATH"
 
     hash -r
