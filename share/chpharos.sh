@@ -196,7 +196,7 @@ CHPHAROS_VERSION=0.1.0.pre
 CHPHAROS_ROOT="$HOME/.pharos/chpharos"
 
 if [ -z "${CHPHAROS_VERSION_LIST_URL}" ]; then
-  CHPHAROS_VERSION_LIST_URL="https://github.com/kontena/chpharos/blob/master/versions.config"
+  CHPHAROS_VERSION_LIST_URL="https://raw.githubusercontent.com/kontena/chpharos/master/versions.config"
 fi
 
 PHAROS_VERSIONS=()
