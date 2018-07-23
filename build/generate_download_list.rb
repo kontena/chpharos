@@ -43,6 +43,7 @@ JSON.parse(open('https://api.github.com/repos/kontena/pharos-cluster/releases').
       version,
       is_pre ? "p" : "s",
       os,
+      'amd64',
       files.join(";")
     ]
 
