@@ -476,7 +476,7 @@ _chpharos_subcommand_install() {
   fi
 
   if [ "${version}" = "latest" ]; then
-    version=$(remote_files | head -1 | cut -d "|" -f 1)
+    version=$(_chpharos_remote_files | head -1 | cut -d "|" -f 1)
   fi
 
   if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
@@ -607,7 +607,7 @@ _chpharos_subcommand_list-remote() {
   local search_os=$(_chpharos_os)
   local search_cpu=$(_chpharos_cpu)
 
-  remote_files | while IFS="|" read -r version stable os cpu url_data; do
+  _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
     if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ]; then
       if [ "${stable}" = "s" ] || [ "$1" = "--pre" ]; then
         if _chpharos_version_is_installed "${version}"; then
