@@ -436,7 +436,6 @@ _chpharos_sha_verify() {
 # fname|size|sha|url;fname2|size2|sha2|url2
 _chpharos_remote_files() {
   if which curl > /dev/null; then
-    echo "running: curl -sL ${CHPHAROS_VERSION_LIST_URL}" > /dev/stderr
     curl -sL "${CHPHAROS_VERSION_LIST_URL}"
   elif which wget > /dev/null; then
     wget "${CHPHAROS_VERSION_LIST_URL}" -o /dev/null -O -
