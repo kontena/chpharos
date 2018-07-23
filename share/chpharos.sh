@@ -194,6 +194,11 @@
 
 CHPHAROS_VERSION=0.1.0.pre
 CHPHAROS_ROOT="$HOME/.pharos/chpharos"
+
+if [ -z "${CHPHAROS_VERSION_LIST_URL}" ]; then
+  CHPHAROS_VERSION_LIST_URL="https://github.com/kontena/chpharos/blob/master/versions.config"
+fi
+
 PHAROS_VERSIONS=()
 unset PHAROS_VERSION
 
@@ -430,18 +435,13 @@ _chpharos_sha_verify() {
 # The url_data field is separated by ;
 # fname|size|sha|url;fname2|size2|sha2|url2
 _chpharos_remote_files() {
-  cat <<EOF
-1.1.1|s|darwin|amd64|pharos-cluster|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-darwin-amd64;kubectl|53860176|10629291bb44e809611d4946ec1ccbb6b11602c5bffc3b11f84c4e2e80a39e58|https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/darwin/amd64/kubectl
-1.1.1|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.1/pharos-cluster-linux-amd64|17610212|698b1da174beef222d4f3d214033c4e1ed94e29c89025af0fd856339136e614d
-1.1.0|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-darwin-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
-1.1.0|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0/pharos-cluster-linux-amd64|17610212|f56f88f3a9cd35dc23966c8b26357f4ac473a8598762ca2505b7197a223f4b2e
-1.1.0-rc.1|p|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-darwin-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
-1.1.0-rc.1|p|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.1.0-rc.1/pharos-cluster-linux-amd64|17610212|e48cf76dae0a166937287c5a8b6be756295226f0889bf3c3c28fb5909d2d86a7
-1.0.6|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-darwin-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-1.0.6|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.6/pharos-cluster-linux-amd64|17610212|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-1.0.0|s|darwin|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-darwin-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
-1.0.0|s|linux|amd64|https://github.com/kontena/pharos-cluster/releases/download/v1.0.0/pharos-cluster-linux-amd64|17610212|f6627a9693c63e0906a3402d6672b928ae81cd769753e136823eb08c33046f50
-EOF
+  if which curl > /dev/null; then
+    curl -sL "${CHPHAROS_VERSION_LIST_URL}"
+  elif which wget > /dev/null; then
+    wget "${CHPHAROS_VERSION_LIST_URL}" -o /dev/null -O -
+  else
+    _chpharos_error_echo "curl or wget required for installing"; return 1
+  fi
 }
 
 _chpharos_remote_version_url_data() {
