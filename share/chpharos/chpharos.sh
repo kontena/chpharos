@@ -662,15 +662,17 @@ _chpharos_subcommand_auto() {
 chpharos() {
   if [ "$#" -eq 0 ]; then
     eval _chpharos_subcommand_longdash_help
-  elif type "_chpharos_subcommand_$1" | grep -q 'function'; then
+  else
     local subcommand
     subcommand="_chpharos_subcommand_$1"
     subcommand="${subcommand//_--/_longdash}"
     subcommand="${subcommand//-/_}"
-    shift
-    "${subcommand}" "$@"
-  else
-    _chpharos_error_echo "unknown subcommand $1"; return 1
+    if type "${subcommand}" | grep -q 'function'; then
+      shift
+      "${subcommand}" "$@"
+    else
+      _chpharos_error_echo "unknown subcommand $1"; return 1
+    fi
   fi
 }
 
