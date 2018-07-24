@@ -193,7 +193,10 @@
 #    limitations under the License.
 
 CHPHAROS_VERSION=0.1.0
-CHPHAROS_ROOT="$HOME/.pharos/chpharos"
+
+if [ -z "${CHPHAROS_ROOT}" ]; then
+  CHPHAROS_ROOT="$HOME/.pharos/chpharos"
+fi
 
 if [ -z "${CHPHAROS_VERSION_LIST_URL}" ]; then
   CHPHAROS_VERSION_LIST_URL="https://raw.githubusercontent.com/kontena/chpharos/master/versions.config"
@@ -369,7 +372,7 @@ _chpharos_validate_external_tools() {
   command -v shasum > /dev/null || (_chpharos_error_echo "shasum not installed"; return 1)
 }
 
-_chpharos_subcommand_--help() {
+_chpharos_subcommand_longdash_help() {
   cat <<EOF
 Usage: chpharos <sub-command> <sub-command-options>
 
@@ -385,7 +388,7 @@ chpharos --version                          Show chpharos version ${CHPHAROS_VER
 EOF
 }
 
-_chpharos_subcommand_--version() {
+_chpharos_subcommand_longdash_version() {
   echo "chpharos ${CHPHAROS_VERSION}"
 }
 
@@ -521,7 +524,7 @@ _chpharos_subcommand_install() {
     [ -d "${destination_dir}" ] && rm -rf "${destination_dir}"
     _chpharos_error_echo "installation failed, use: chpharos list-remote to get a list of available versions."; return 1
   else
-    echo "Installed version ${version}"
+    echo "Installed version ${version}. To set as current, use: chpharos use ${version}"
     _chpharos_scan &> /dev/null
   fi
 }
@@ -553,7 +556,7 @@ _chpharos_subcommand_info() {
   fi
 
   if _chpharos_version_is_installed "${version}"; then
-    _chpharos_subcommand_--version
+    _chpharos_subcommand_longdash_version
     for file in "${CHPHAROS_ROOT}/versions/${version}"/*; do
       if [ -e "$file" ]; then
         echo "$file:"
@@ -600,7 +603,7 @@ EOF
   fi
 }
 
-_chpharos_subcommand_list-remote() {
+_chpharos_subcommand_list_remote() {
   _chpharos_validate_external_tools || return 1
 
   local search_os search_cpu
@@ -642,8 +645,8 @@ _chpharos_subcommand_ls() {
   _chpharos_subcommand_list "$@"
 }
 
-_chpharos_subcommand_ls-remote() {
-  _chpharos_subcommand_list-remote "$@"
+_chpharos_subcommand_ls_remote() {
+  _chpharos_subcommand_list_remote "$@"
 }
 
 _chpharos_subcommand_auto() {
@@ -658,10 +661,12 @@ _chpharos_subcommand_auto() {
 
 chpharos() {
   if [ "$#" -eq 0 ]; then
-    eval _chpharos_subcommand_--help
+    eval _chpharos_subcommand_longdash_help
   elif type "_chpharos_subcommand_$1" | grep -q 'function'; then
     local subcommand
     subcommand="_chpharos_subcommand_$1"
+    subcommand="${subcommand//_--/_longdash}"
+    subcommand="${subcommand//-/_}"
     shift
     "${subcommand}" "$@"
   else
