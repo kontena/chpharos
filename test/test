@@ -1,0 +1,68 @@
+#!/bin/sh
+
+testChpharosUse() {
+  chpharos use 1.0.0 > /dev/null
+  version=$(pharos-cluster version | grep "pharos-cluster version")
+  assertEquals "pharos-cluster version 1.0.0" "${version}"
+  version=$(kubectl version --short --client)
+  assertEquals "Client Version: v1.10.1" "${version}"
+  chpharos use 1.2.2 > /dev/null
+  version=$(pharos-cluster version | grep "pharos-cluster version")
+  assertEquals "  - pharos-cluster version 1.2.2" "${version}"
+  version=$(kubectl version --short --client)
+  assertEquals "Client Version: v1.10.5" "${version}"
+}
+
+testChpharosUseLocal() {
+  [ -f ".pharos-version" ] && mv .pharos-version .tmp.pharos-version
+  chpharos use --local 1.0.0 > /dev/null
+  assertEquals "1.0.0" "$(cat .pharos-version)"
+  chpharos use --local 1.2.2 > /dev/null
+  assertEquals "1.2.2" "$(cat .pharos-version)"
+  rm -f .pharos-version
+  [ -f ".tmp.pharos-version" ] && mv .tmp.pharos-version .pharos-version
+}
+
+testChpharosCurrent() {
+  chpharos use 1.0.0 > /dev/null
+  assertEquals "1.0.0" "$(chpharos current --short)"
+  chpharos use 1.2.2 > /dev/null
+  assertEquals "1.2.2" "$(chpharos current --short)"
+}
+
+testChpharosList() {
+  chpharos use 1.0.0 > /dev/null
+  version=$(chpharos list | grep "1.0.0")
+  assertEquals "1.0.0 (current)" "${version}"
+  version=$(chpharos list | grep "1.2.2")
+  assertEquals "1.2.2" "${version}"
+  chpharos use 1.2.2 > /dev/null
+  version=$(chpharos list | grep "1.2.2")
+  assertEquals "1.2.2 (current)" "${version}"
+}
+
+testChpharosListRemote() {
+  version=$(chpharos list-remote | grep "1.2.2")
+  assertEquals "1.2.2 (installed)" "${version}"
+
+  version=$(chpharos list-remote | grep "1.0.1")
+  assertEquals "1.0.1" "${version}"
+
+  chpharos list-remote | grep "1.2.0-rc.1" > /dev/null
+  ret=$?
+  assertFalse "rc is not listed without --pre" $ret
+
+  chpharos list-remote --pre | grep "1.2.0-rc.1" > /dev/null
+  ret=$?
+  assertTrue "rc is listed with --pre" $ret
+}
+
+oneTimeSetUp() {
+  export CHPHAROS_ROOT="$(dirname "$(realpath $0)")/test-binaries"
+  . ../share/chpharos/chpharos.sh
+}
+
+# Load and run shUnit2.
+[ -n "${ZSH_VERSION:-}" ] && SHUNIT_PARENT=$0
+[[ -z "$SHUNIT2"     ]] && SHUNIT2=$(command -v shunit2)
+. $SHUNIT2

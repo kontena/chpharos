@@ -1,0 +1,17 @@
+#!/bin/sh
+
+export CHPHAROS_ROOT="$(dirname "$(realpath $0)")/test-binaries"
+mkdir -p "${CHPHAROS_ROOT}"
+
+[ -f "${CHPHAROS_ROOT}/versions/1.0.0/pharos-cluster" ] && \
+  [ -f "${CHPHAROS_ROOT}/versions/1.0.0/kubectl" ] && \
+  [ -f "${CHPHAROS_ROOT}/versions/1.2.2/pharos-cluster" ] && \
+  [ -f "${CHPHAROS_ROOT}/versions/1.2.2/kubectl" ] &&
+  echo "Already installed test binaries" && \
+  exit 0
+
+. ../share/chpharos/chpharos.sh
+
+chpharos install 1.0.0
+chpharos install 1.2.2
+chpharos reset
