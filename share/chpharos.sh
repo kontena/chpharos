@@ -192,7 +192,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-CHPHAROS_VERSION=0.1.0.pre
+CHPHAROS_VERSION=0.1.0
 CHPHAROS_ROOT="$HOME/.pharos/chpharos"
 
 if [ -z "${CHPHAROS_VERSION_LIST_URL}" ]; then
@@ -200,24 +200,24 @@ if [ -z "${CHPHAROS_VERSION_LIST_URL}" ]; then
 fi
 
 PHAROS_VERSIONS=()
-unset PHAROS_VERSION
 
 _chpharos_scan() {
-  local unsorted_versions=()
+  local unsorted_versions=""
   local pharos_version
   PHAROS_VERSIONS=()
 
-  for pharos_version in ${CHPHAROS_ROOT}/versions/*.*.*; do
-    if [ -d ${pharos_version} ]; then
-      if [ -z "${pharos_version##*-*}" ]; then
-        unsorted_versions+=("${pharos_version/$CHPHAROS_ROOT\/versions\//}")
-      else
-        unsorted_versions+=("${pharos_version/$CHPHAROS_ROOT\/versions\//}_")
+  # Build a list of versions where non prerelease version numbers get suffixed with _ for sorting reasons
+  for pharos_version in "${CHPHAROS_ROOT}"/versions/*.*.*; do
+    if [ -d "${pharos_version}" ]; then
+      unsorted_versions="${unsorted_versions}$IFS${pharos_version/$CHPHAROS_ROOT\/versions\//}"
+      if [ ! -z "${pharos_version##*-*}" ]; then
+        unsorted_versions="${unsorted_versions}_"
       fi
     fi
   done
-  unsorted_versions=($(sort -r <<< "${unsorted_versions[*]}"))
-  for pharos_version in ${unsorted_versions[*]}; do
+
+  # Sort and remove the trailing _
+  for pharos_version in $(echo "${unsorted_versions}" | sort -r); do
     if [ -z "${pharos_version##*_}" ]; then
       PHAROS_VERSIONS+=("${pharos_version%_}")
     else
@@ -227,7 +227,8 @@ _chpharos_scan() {
 }
 
 _chpharos_find_versionfile_ascending() {
-  local current_path="$(pwd)"
+  local current_path
+  current_path="$(pwd)"
 
   while ! [ -e "${current_path}/.pharos-version" ] && [ -n "${current_path}" ]; do
     current_path="${current_path%/*}"
@@ -237,17 +238,15 @@ _chpharos_find_versionfile_ascending() {
 
 _chpharos_auto() {
   local auto_version
-  if [ "${PHAROS_VERSION}" != "" ]; then
-    _chpharos_auto_version_origin="PHAROS_VERSION environment variable"
-    auto_version="${PHAROS_VERSION}"
-  elif [ -f "$PWD/.pharos-version" ]; then
+  if [ -f "$PWD/.pharos-version" ]; then
     _chpharos_auto_version_origin="$PWD/.pharos-version file"
     auto_version=$(cat .pharos-version)
   elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
     _chpharos_auto_version_origin="git repository root .pharos-version file"
     auto_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
   else
-    local ascending="$(_chpharos_find_versionfile_ascending)"
+    local ascending
+    ascending="$(_chpharos_find_versionfile_ascending)"
     if [ "${ascending}" != "" ]; then
       _chpharos_auto_version_origin="${ascending} file"
       auto_version=$(cat "${ascending}")
@@ -274,8 +273,7 @@ _chpharos_os() {
 }
 
 _chpharos_cpu() {
-  local uname_m=$(uname -m)
-  case "${uname_m}" in
+  case $(uname -m) in
     amd64)  echo "amd64" ;;
     x86_64) echo "amd64" ;;
     *) _chpharos_error_echo "Unsupported processor architecture"; return 1 ;;
@@ -294,7 +292,8 @@ _chpharos_version_is_installed() {
 }
 
 _chpharos_subcommand_reset() {
-  local current_version=$(_chpharos_current_version_from_path)
+  local current_version
+  current_version="$(_chpharos_current_version_from_path)"
   [ -z "${current_version}" ] && return 0
   local current_version_root="${CHPHAROS_ROOT}/versions/${current_version}"
   PATH=":$PATH:" # surround with :
@@ -353,7 +352,7 @@ EOF
     hash -r
 
     if [ ! -z "${destination}" ]; then
-      echo "${PHAROS_VERSION}" > ${destination}
+      echo "${version}" > "${destination}"
       echo "using pharos version ${version}, updated ${destination}"
     else
       echo "using pharos version ${version}"
@@ -366,8 +365,8 @@ EOF
 }
 
 _chpharos_validate_external_tools() {
-  (which curl > /dev/null || which wget > /dev/null) || (_chpharos_error_echo "curl or wget not installed"; return 1)
-  which shasum > /dev/null || (_chpharos_error_echo "shasum not installed"; return 1)
+  (command -v curl > /dev/null || command -v wget > /dev/null) || (_chpharos_error_echo "curl or wget not installed"; return 1)
+  command -v shasum > /dev/null || (_chpharos_error_echo "shasum not installed"; return 1)
 }
 
 _chpharos_subcommand_--help() {
@@ -391,11 +390,11 @@ _chpharos_subcommand_--version() {
 }
 
 _chpharos_subcommand_version() {
-  _chpharos_subcommand_current
+  _chpharos_subcommand_current -
 }
 
 _chpharos_pv_is_installed() {
-  which pv > /dev/null
+  command -v pv > /dev/null
 }
 
 _chpharos_get_wget() {
@@ -404,7 +403,7 @@ _chpharos_get_wget() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    (wget -O "${url}" | pv -s ${size} > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+    (wget -O "${url}" | pv -s "${size}" > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
   else
     wget -O "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
   fi
@@ -416,9 +415,9 @@ _chpharos_get_curl() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    (curl -sL "${url}" | pv -s ${size} > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+    (curl -sL "${url}" | pv -s "${size}" > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
   else
-    curl -sL "${url}" ${pv} > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+    curl -sL "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
   fi
 }
 
@@ -435,9 +434,9 @@ _chpharos_sha_verify() {
 # The url_data field is separated by ;
 # fname|size|sha|url;fname2|size2|sha2|url2
 _chpharos_remote_files() {
-  if which curl > /dev/null; then
+  if command -v curl > /dev/null; then
     curl -sL "${CHPHAROS_VERSION_LIST_URL}"
-  elif which wget > /dev/null; then
+  elif command -v wget > /dev/null; then
     wget "${CHPHAROS_VERSION_LIST_URL}" -o /dev/null -O -
   else
     _chpharos_error_echo "curl or wget required for listing"; return 1
@@ -445,9 +444,10 @@ _chpharos_remote_files() {
 }
 
 _chpharos_remote_version_url_data() {
-  local search_version="$1"
-  local search_os="$(_chpharos_os)"
-  local search_cpu="$(_chpharos_cpu)"
+  local search_version search_os search_cpu
+  search_version="$1"
+  search_os="$(_chpharos_os)"
+  search_cpu="$(_chpharos_cpu)"
   _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
     if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ] && [ "${version}" = "${search_version}" ]; then
       echo "${url_data//\;/\n}"
@@ -492,9 +492,9 @@ _chpharos_subcommand_install() {
 
     local destination="${destination_dir}/${dl_filename}"
 
-    if which curl > /dev/null; then
+    if command -v curl > /dev/null; then
       _chpharos_get_curl "${dl_url}" "${destination}" "${dl_size}"
-    elif which wget > /dev/null; then
+    elif command -v wget > /dev/null; then
       _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
     else
       rmdir "${destination_dir}" &> /dev/null
@@ -529,13 +529,13 @@ _chpharos_subcommand_install() {
 _chpharos_subcommand_uninstall() {
   local version="$1"
 
-  [ -z "${CHPHAROS_ROOT}"] && return 1
+  [ -z "${CHPHAROS_ROOT}" ] && return 1
 
   if [ -z "$1" ]; then
     _chpharos_error_echo "missing version: use chpharos uninstall <version>"; return 1
   fi
 
-  if _chpharos_version_is_installed "${version}" ]; then
+  if _chpharos_version_is_installed "${version}"; then
     rm -rf "${CHPHAROS_ROOT}/versions/${version}"
     echo "Uninstalled version ${version}"
     _chpharos_scan &> /dev/null
@@ -554,7 +554,7 @@ _chpharos_subcommand_info() {
 
   if _chpharos_version_is_installed "${version}"; then
     _chpharos_subcommand_--version
-    for file in ${CHPHAROS_ROOT}/versions/${version}/*; do
+    for file in "${CHPHAROS_ROOT}/versions/${version}"/*; do
       if [ -e "$file" ]; then
         echo "$file:"
         $file version || $file --version || echo "$file does not report a version number"
@@ -566,8 +566,7 @@ _chpharos_subcommand_info() {
 }
 
 _chpharos_subcommand_current() {
-  local full
-  local short
+  local full short version
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --all) full="true" ;;
@@ -584,7 +583,7 @@ EOF
     shift
   done
 
-  local version=$(_chpharos_current_version_from_path)
+  version=$(_chpharos_current_version_from_path)
 
   if [ -z "${version}" ]; then
     _chpharos_error_echo "no version selected"; return 1
@@ -604,16 +603,18 @@ EOF
 _chpharos_subcommand_list-remote() {
   _chpharos_validate_external_tools || return 1
 
-  local search_os=$(_chpharos_os)
-  local search_cpu=$(_chpharos_cpu)
+  local search_os search_cpu
+
+  search_os=$(_chpharos_os)
+  search_cpu=$(_chpharos_cpu)
 
   _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
     if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ]; then
       if [ "${stable}" = "s" ] || [ "$1" = "--pre" ]; then
         if _chpharos_version_is_installed "${version}"; then
-          printf "* %-15s %-10s\n" "${version} (installed)"
+          echo "${version} (installed)"
         else
-          printf "* %-15s %-10s\n" "${version}"
+          echo "${version}"
         fi
       fi
     fi
@@ -621,11 +622,12 @@ _chpharos_subcommand_list-remote() {
 }
 
 _chpharos_subcommand_list() {
-  local version
+  local version current_version
   _chpharos_scan &> /dev/null
+  current_version="$(_chpharos_current_version_from_path)"
   if [ "${#PHAROS_VERSIONS[@]}" ]; then
-    for version in ${PHAROS_VERSIONS}; do
-      if [ "${version}" = "${PHAROS_VERSION}" ]; then
+    for version in ${PHAROS_VERSIONS[*]}; do
+      if [ ! -z "${current_version}" ] && [ "${version}" = "${current_version}" ]; then
         echo "${version} (current)"
       else
         echo "${version}"
@@ -637,11 +639,11 @@ _chpharos_subcommand_list() {
 }
 
 _chpharos_subcommand_ls() {
-  _chpharos_subcommand_list $@
+  _chpharos_subcommand_list "$@"
 }
 
 _chpharos_subcommand_ls-remote() {
-  _chpharos_subcommand_list-remote $@
+  _chpharos_subcommand_list-remote "$@"
 }
 
 _chpharos_subcommand_auto() {
@@ -658,9 +660,10 @@ chpharos() {
   if [ "$#" -eq 0 ]; then
     eval _chpharos_subcommand_--help
   elif type "_chpharos_subcommand_$1" | grep -q 'function'; then
-    local subcommand=$1
+    local subcommand
+    subcommand="_chpharos_subcommand_$1"
     shift
-    _chpharos_subcommand_$subcommand $*
+    "${subcommand}" "$@"
   else
     _chpharos_error_echo "unknown subcommand $1"; return 1
   fi
