@@ -11,6 +11,10 @@ testChpharosUse() {
   assertEquals "  - pharos-cluster version 1.2.2" "${version}"
   version=$(kubectl version --short --client)
   assertEquals "Client Version: v1.10.5" "${version}"
+
+  chpharos use 0.0.0 &> /dev/null
+  ret=$?
+  assertFalse "setting to unknown version should return an error" $ret
 }
 
 testChpharosUseLocal() {
@@ -24,6 +28,12 @@ testChpharosUseLocal() {
 }
 
 testChpharosCurrent() {
+  chpharos reset
+
+  chpharos current &> /dev/null
+  ret=$?
+  assertFalse "current should not bet set after reset" $ret
+
   chpharos use 1.0.0 > /dev/null
   assertEquals "1.0.0" "$(chpharos current --short)"
   chpharos use 1.2.2 > /dev/null
@@ -57,12 +67,73 @@ testChpharosListRemote() {
   assertTrue "rc is listed with --pre" $ret
 }
 
+testChpharosAuto() {
+  chpharos reset
+  mkdir autotest1 &> /dev/null
+  mkdir autotest2 &> /dev/null
+  chpharos use 1.2.2 &> /dev/null
+  echo "1.0.0" > autotest1/.pharos-version
+  echo "1.2.2" > autotest2/.pharos-version
+
+  # Check version does not change without auto
+  cd autotest1
+  assertEquals "1.2.2" "$(chpharos current --short)"
+  cd ..
+
+  chpharos auto
+
+  cd autotest1
+  assertEquals "1.0.0" "$(chpharos current --short)"
+  cd ..
+
+  cd autotest2
+  assertEquals "1.2.2" "$(chpharos current --short)"
+  cd ..
+
+  rm -rf autotest1
+  rm -rf autotest2
+  chpharos reset
+}
+
+testChpharosInstall() {
+  chpharos install 0.0.0 &> /dev/null
+  ret=$?
+  assertFalse "trying to install an unknown version should return an error" $ret
+
+  chpharos install 1.0.1 &> /dev/null
+  ret=$?
+  assertTrue "installing a known version should not fail" $ret
+
+  chpharos use 1.0.1 &> /dev/null
+  assertEquals "1.0.1" "$(chpharos current --short)"
+
+  chpharos uninstall 0.0.0 &> /dev/null
+  ret=$?
+  assertFalse "uninstalling an unknown version should fail" $ret
+
+  chpharos uninstall 1.0.1 &> /dev/null
+  ret=$?
+  assertTrue "uninstall an installed version should not fail" $ret
+
+  chpharos use 1.0.1 &> /dev/null
+  ret=$?
+  assertFalse "uninstall should make a version unknown" $ret
+}
+
+testChpharosReset() {
+  chpharos use 1.2.2 > /dev/null
+  local check_path
+  check_path="${CHPHAROS_ROOT}/versions/1.2.2"
+  assertTrue "path includes $check_path" "[[ \"$PATH\" == *\"$check_path\"* ]]"
+  chpharos reset
+  assertFalse "path does not include $check_path" "[[ \"$PATH\" == *\"$check_path\"* ]]"
+}
+
 oneTimeSetUp() {
   export CHPHAROS_ROOT="$(dirname "$(realpath $0)")/test-binaries"
   . ../share/chpharos/chpharos.sh
 }
 
-# Load and run shUnit2.
 [ -n "${ZSH_VERSION:-}" ] && SHUNIT_PARENT=$0
-[[ -z "$SHUNIT2"     ]] && SHUNIT2=$(command -v shunit2)
+[ -z "$SHUNIT2" ] && SHUNIT2=$(command -v shunit2)
 . $SHUNIT2
