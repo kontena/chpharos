@@ -1,15 +1,14 @@
 # Chpharos - Kontena Pharos version switcher
 
-Install and use multiple versions of [pharos-cluster](https://github.com/kontena/pharos-cluster) and the compatible tools [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) for each.
+Install and use multiple versions of [pharos-cluster](https://github.com/kontena/pharos-cluster) and the compatible tools such as [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) for each.
 
-`chpharos` has been inspired by the Ruby version switcher [`chruby`](https://github.com/postmodern/chruby).
+`chpharos` has been heavily inspired by the Ruby version switcher [`chruby`](https://github.com/postmodern/chruby).
 
 ## Requirements
 
 - A shell compatible with bash version 3 or newer
-- X86_64 CPU (required by the tools)
 - A tool for downloading files (currently supported: [curl](https://curl.haxx.se/) and [wget](https://www.gnu.org/software/wget/), usually already installed on compatible systems)
-- [shasum](https://linux.die.net/man/1/shasum), usually already installed on compatible systems.
+- File checksum verification tool [shasum](https://linux.die.net/man/1/shasum), usually already installed on compatible systems.
 
 ### Optional
 
@@ -64,6 +63,10 @@ To enable this, you need to add a line in your start-up scripts after the loadin
 
 ```
 chpharos auto
+```
+
+```
+echo "chpharos auto" >> ~/.bash_profile
 ```
 
 You can use `chpharos use --local 1.1.1` to create a `.pharos-version` file in the current directory or `chpharos use --default 1.1.1` to set a default version by creating a `.pharos-version` file in the `$HOME` directory.
