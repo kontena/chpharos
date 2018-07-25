@@ -294,7 +294,7 @@ _chpharos_version_is_installed() {
   return 1
 }
 
-_chpharos_subcommand_reset() {
+_chpharos_reset() {
   local current_version
   current_version="$(_chpharos_current_version_from_path)"
   [ -z "${current_version}" ] && return 0
@@ -347,7 +347,7 @@ EOF
   local version="$1"
 
   if _chpharos_version_is_installed "${version}"; then
-    _chpharos_subcommand_reset
+    _chpharos_reset
 
     export PATH="${CHPHAROS_ROOT}/versions/${version}:$PATH"
     _chpharos_auto_version_origin="chpharos use command"
@@ -382,6 +382,9 @@ chpharos uninstall <version>                Uninstall Kontena Pharos version
 chpharos current [--all]                    Show the current Kontena Pharos version
 chpharos list                               List installed Kontena Pharos versions
 chpharos list-remote [--pre]                List remote Kontena Pharos versions available for install
+
+chpharos reset                              Remove chpharos path modifications and disable automatic switching
+chpharos auto                               Load automatic version switcher
 
 chpharos --help                             Show this help
 chpharos --version                          Show chpharos version ${CHPHAROS_VERSION}
@@ -659,6 +662,19 @@ _chpharos_subcommand_auto() {
   fi
 }
 
+_chpharos_subcommand_reset() {
+  if [[ -n "$ZSH_VERSION" ]]; then
+    if [[ "$preexec_functions" == *_chpharos_auto* ]]; then
+      local delete
+      delete=("_chpharos_auto")
+      preexec_functions=("${preexec_functions[@]/$delete}")
+    fi
+  elif [[ -n "$BASH_VERSION" ]]; then
+    trap - DEBUG
+  fi
+  _chpharos_reset
+}
+
 chpharos() {
   if [ "$#" -eq 0 ]; then
     eval _chpharos_subcommand_longdash_help
@@ -676,6 +692,6 @@ chpharos() {
   fi
 }
 
-_chpharos_subcommand_reset
+_chpharos_reset
 _chpharos_scan
-_chpharos_auto &> /dev/null
+
