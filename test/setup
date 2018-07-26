@@ -17,6 +17,8 @@ mkdir -p "${CHPHAROS_ROOT}"
 
 echo "Listing available versions:"
 chpharos list-remote
+echo "Curl?"
+curl -sL "https://raw.githubusercontent.com/kontena/chpharos/master/versions.config"
 
 chpharos install 1.0.0
 chpharos install 1.2.2
