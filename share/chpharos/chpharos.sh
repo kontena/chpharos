@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #
 #                                  Apache License
 #                            Version 2.0, January 2004
@@ -407,9 +405,9 @@ _chpharos_get_wget() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    (wget -O "${url}" | pv -s "${size}" > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+    wget -O "${url}" | pv -s "${size}" > "${destination}"
   else
-    wget -O "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+    wget -O "${url}" > "${destination}"
   fi
 }
 
@@ -419,9 +417,9 @@ _chpharos_get_curl() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    (curl -sL "${url}" | pv -s "${size}" > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+    curl -sL "${url}" | pv -s "${size}" > "${destination}"
   else
-    curl -sL "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+    curl -sL "${url}" > "${destination}"
   fi
 }
 
