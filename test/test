@@ -128,14 +128,10 @@ testChpharosReset() {
   assertFalse "path does not include $check_path" "[[ \"$PATH\" == *\"$check_path\"* ]]"
 }
 
-if [ -z "${ZSH_VERSION}" ]; then
-  test_root="${BASH_SOURCE[0]}"
-else
-  test_root="${(%):-%N}"
-  SHUNIT_PARENT=$0
-  setopt shwordsplit
-fi
-test_root="${test_root%/*}"
+[ ! -z "${ZSH_VERSION}" ] && SHUNIT_PARENT=$0 && setopt shwordsplit
+
+test_root=`dirname "${BASH_SOURCE[0]-$0}"`
+test_root=`cd "$test_root" && pwd`
 
 export CHPHAROS_ROOT="${test_root}/test-binaries"
 export CHPHAROS_SRC="${test_root}/../share/chpharos/chpharos.sh"

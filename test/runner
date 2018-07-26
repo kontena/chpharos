@@ -2,12 +2,8 @@
 
 error=0
 
-if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="${BASH_SOURCE}"
-else
-  test_root="${(%):-%N}"
-fi
-test_root="${test_root%/*}"
+test_root=`dirname "${BASH_SOURCE[0]-$0}"`
+test_root=`cd "$test_root" && pwd`
 
 test_exec="${test_root}/test"
 export HOME="${test_root}/home"
