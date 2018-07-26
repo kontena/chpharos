@@ -128,7 +128,7 @@ testChpharosReset() {
   assertFalse "path does not include $check_path" "[[ \"$PATH\" == *\"$check_path\"* ]]"
 }
 
-if [ -z "${ZSH_VERSION:-}" ]; then
+if [ -z "${ZSH_VERSION}" ]; then
   test_root="${BASH_SOURCE[0]}"
 else
   test_root="${(%):-%N}"
