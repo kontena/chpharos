@@ -11,9 +11,10 @@ addons:
     packages:
       - shunit2
       - zsh
+      - curl
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install shunit2 bash zsh; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install shunit2 bash zsh curl; fi
 
 before_script:
   - export SHUNIT2="$(command -v shunit2 2>/dev/null)"
