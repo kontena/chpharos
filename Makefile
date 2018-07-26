@@ -15,7 +15,10 @@ all:
 clean:
 	rm -rf test/binaries
 
-test:
+test/test-binaries:
+	./test/setup
+
+test: test/test-binaries
 	SHELL=`command -v bash` ./test/runner
 	SHELL=`command -v zsh`  ./test/runner
 
@@ -26,3 +29,5 @@ install:
 uninstall:
 	for file in $(INSTALL_FILES); do rm -f $(DESTDIR)$(PREFIX)/$$file; done
 	rmdir $(DESTDIR)$(SHARE_DIR)
+
+.PHONY: clean test install uninstall all

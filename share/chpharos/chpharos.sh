@@ -233,7 +233,7 @@ _chpharos_find_versionfile_ascending() {
   local current_path
   current_path="$(pwd)"
 
-  while ! [ -e "${current_path}/.pharos-version" ] && [ -n "${current_path}" ]; do
+  while [ ! -e "${current_path}/.pharos-version" ] && [ ! -n "${current_path}" ]; do
     current_path="${current_path%/*}"
   done
   [ -e "${current_path}/.pharos-version" ] && echo "${current_path}/.pharos-version"
@@ -241,12 +241,10 @@ _chpharos_find_versionfile_ascending() {
 
 _chpharos_auto() {
   local auto_version
+
   if [ -f "$PWD/.pharos-version" ]; then
     _chpharos_auto_version_origin="$PWD/.pharos-version file"
     auto_version=$(cat .pharos-version)
-  elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
-    _chpharos_auto_version_origin="git repository root .pharos-version file"
-    auto_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
   else
     local ascending
     ascending="$(_chpharos_find_versionfile_ascending)"
@@ -658,8 +656,10 @@ _chpharos_subcommand_auto() {
       preexec_functions+=("_chpharos_auto")
     fi
   elif [[ -n "$BASH_VERSION" ]]; then
+    set -T # inherit traps to subshells
     trap '[[ "$BASH_COMMAND" != "$PROMPT_COMMAND" ]] && _chpharos_auto' DEBUG
   fi
+  _chpharos_auto
 }
 
 _chpharos_subcommand_reset() {
@@ -692,6 +692,5 @@ chpharos() {
   fi
 }
 
-_chpharos_reset
+chpharos reset
 _chpharos_scan
-

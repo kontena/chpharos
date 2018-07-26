@@ -68,27 +68,24 @@ testChpharosListRemote() {
 }
 
 testChpharosAuto() {
-  chpharos reset
   mkdir autotest1 &> /dev/null
   mkdir autotest2 &> /dev/null
-  chpharos use 1.2.2 &> /dev/null
   echo "1.0.0" > autotest1/.pharos-version
   echo "1.2.2" > autotest2/.pharos-version
 
-  # Check version does not change without auto
-  cd autotest1
-  assertEquals "1.2.2" "$(chpharos current --short)"
-  cd ..
-
-  chpharos auto
+  chpharos use 1.2.2 &> /dev/null
 
   cd autotest1
-  assertEquals "1.0.0" "$(chpharos current --short)"
+  assertEquals "version should not change when not in auto" "1.2.2" "$(chpharos current --short)"
   cd ..
 
-  cd autotest2
-  assertEquals "1.2.2" "$(chpharos current --short)"
-  cd ..
+  cd autotest1 && chpharos auto
+  assertEquals "version in autotest1 should be 1.0.0" "1.0.0" "$(chpharos current --short)"
+  cd .. && chpharos auto
+
+  cd autotest2 && chpharos auto
+  assertEquals "version in autotest2 should be 1.2.2" "1.2.2" "$(chpharos current --short)"
+  cd .. && chpharos auto
 
   rm -rf autotest1
   rm -rf autotest2
@@ -96,6 +93,8 @@ testChpharosAuto() {
 }
 
 testChpharosInstall() {
+  [ -n "$SKIP_INSTALL" ] && return 0
+
   chpharos install 0.0.0 &> /dev/null
   ret=$?
   assertFalse "trying to install an unknown version should return an error" $ret
@@ -129,11 +128,18 @@ testChpharosReset() {
   assertFalse "path does not include $check_path" "[[ \"$PATH\" == *\"$check_path\"* ]]"
 }
 
-oneTimeSetUp() {
-  export CHPHAROS_ROOT="$(dirname "$(realpath $0)")/test-binaries"
-  . ../share/chpharos/chpharos.sh
-}
+if [ -z "${ZSH_VERSION:-}" ]; then
+  test_root="$(realpath $(dirname "${BASH_SOURCE[0]}"))"
+else
+  test_root="$(realpath $(dirname "${(%):-%N}"))"
+  SHUNIT_PARENT=$0
+  setopt shwordsplit
+fi
 
-[ -n "${ZSH_VERSION:-}" ] && SHUNIT_PARENT=$0
+export CHPHAROS_ROOT="${test_root}/test-binaries"
+export CHPHAROS_SRC="$(realpath "${test_root}/../share/chpharos/chpharos.sh")"
+
+. "${CHPHAROS_SRC}"
+
 [ -z "$SHUNIT2" ] && SHUNIT2=$(command -v shunit2)
 . $SHUNIT2

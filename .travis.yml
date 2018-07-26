@@ -1,0 +1,21 @@
+sudo: false
+
+os:
+  - linux
+  - osx
+
+language: bash
+
+addons:
+  apt:
+    packages:
+      - shunit2
+      - zsh
+
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install shunit2 bash; fi
+
+before_script:
+  - export SHUNIT2="$(command -v shunit2 2>/dev/null)"
+
+script: make test
