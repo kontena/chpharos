@@ -3,11 +3,11 @@
 error=0
 
 if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="${BASH_SOURCE[0]%/*}"
+  test_root="${BASH_SOURCE[0]}"
 else
   test_root="${(%):-%N}"
-  test_root="${test_root%/*}"
 fi
+test_root="${test_root%/*}"
 
 test_exec="${test_root}/test"
 export HOME="${test_root}/home"
