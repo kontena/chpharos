@@ -15,6 +15,9 @@ mkdir -p "${CHPHAROS_ROOT}"
 
 . "${test_root}"/../share/chpharos/chpharos.sh
 
+echo "Listing available versions:"
+chpharos list-remote
+
 chpharos install 1.0.0
 chpharos install 1.2.2
 chpharos reset
