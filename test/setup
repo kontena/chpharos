@@ -1,9 +1,9 @@
 #!/bin/sh
 
 if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="$(realpath $(dirname "${BASH_SOURCE[0]}"))"
+  test_root="$(readlink -f $(dirname "${BASH_SOURCE[0]}"))"
 else
-  test_root="$(realpath $(dirname "${(%):-%N}"))"
+  test_root="$(readlink -f $(dirname "${(%):-%N}"))"
 fi
 
 export CHPHAROS_ROOT="${test_root}/test-binaries"
@@ -16,7 +16,7 @@ mkdir -p "${CHPHAROS_ROOT}"
   echo "Already installed test binaries" && \
   exit 0
 
-. "$(realpath "${test_root}"/..)"/share/chpharos/chpharos.sh
+. "$(readlink -f "${test_root}"/..)"/share/chpharos/chpharos.sh
 
 chpharos install 1.0.0
 chpharos install 1.2.2
