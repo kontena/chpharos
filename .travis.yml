@@ -4,7 +4,7 @@ os:
   - linux
   - osx
 
-language: bash
+language: generic
 
 addons:
   apt:
@@ -13,7 +13,7 @@ addons:
       - zsh
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install shunit2 bash; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install shunit2 bash zsh; fi
 
 before_script:
   - export SHUNIT2="$(command -v shunit2 2>/dev/null)"
