@@ -21,6 +21,13 @@ echo "Curl?"
 curl -sL "https://raw.githubusercontent.com/kontena/chpharos/master/versions.config"
 _chpharos_remote_version_url_data "1.0.0"
 
+echo "OS:"
+_chpharos_os
+
+echo "CPU:"
+_chpharos_cpu
+
+
 chpharos install 1.0.0
 chpharos install 1.2.2
 chpharos reset
