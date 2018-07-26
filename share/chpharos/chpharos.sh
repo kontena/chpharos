@@ -489,8 +489,10 @@ _chpharos_subcommand_install() {
   local destination_dir="${CHPHAROS_ROOT}/versions/${version}"
   mkdir -p "${destination_dir}" &> /dev/null
 
+  echo "Retrieving version information .."
+
   _chpharos_remote_version_url_data "${version}" | while IFS="|" read -r dl_filename dl_size dl_sha256 dl_url; do
-    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url}"
+    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
 
     local destination="${destination_dir}/${dl_filename}"
 
