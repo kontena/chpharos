@@ -138,9 +138,12 @@ fi
 test_root="${test_root%/*}"
 
 export CHPHAROS_ROOT="${test_root}/test-binaries"
-export CHPHAROS_SRC="${test_root}"/../share/chpharos/chpharos.sh"
+export CHPHAROS_SRC="${test_root}/../share/chpharos/chpharos.sh"
+
+echo "CHPHAROS_ROOT=${CHPHAROS_ROOT}"
+echo "CHPHAROS_SRC=${CHPHAROS_SRC}"
 
 . "${CHPHAROS_SRC}"
 
-[ -z "$SHUNIT2" ] && SHUNIT2=$(command -v shunit2)
+[ -z "$SHUNIT2" ] && SHUNIT2="$(command -v shunit2)"
 . $SHUNIT2
