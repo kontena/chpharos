@@ -3,9 +3,9 @@
 error=0
 
 if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="$(readlink -f $(dirname "${BASH_SOURCE[0]}"))"
+  test_root="$(dirname "${BASH_SOURCE[0]}")"
 else
-  test_root="$(readlink -f $(dirname "${(%):-%N}"))"
+  test_root="$(dirname "${(%):-%N}")"
 fi
 
 test_exec="${test_root}/test"

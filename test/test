@@ -129,15 +129,15 @@ testChpharosReset() {
 }
 
 if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="$(readlink -f $(dirname "${BASH_SOURCE[0]}"))"
+  test_root="$(dirname "${BASH_SOURCE[0]}")"
 else
-  test_root="$(readlink -f $(dirname "${(%):-%N}"))"
+  test_root="$(dirname "${(%):-%N}")"
   SHUNIT_PARENT=$0
   setopt shwordsplit
 fi
 
 export CHPHAROS_ROOT="${test_root}/test-binaries"
-export CHPHAROS_SRC="$(readlink -f "${test_root}/../share/chpharos/chpharos.sh")"
+export CHPHAROS_SRC="${test_root}"/../share/chpharos/chpharos.sh"
 
 . "${CHPHAROS_SRC}"
 
