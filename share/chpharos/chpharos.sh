@@ -512,7 +512,7 @@ _chpharos_subcommand_install() {
     if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
       chmod ug+x "${destination}"
     else
-      rm -f "${destination}"
+      rm -rf "${destination_dir}"
       _chpharos_error_echo "checksum verification failed"
     fi
 
