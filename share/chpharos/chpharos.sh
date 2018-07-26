@@ -452,7 +452,7 @@ _chpharos_remote_version_url_data() {
   search_cpu="$(_chpharos_cpu)"
   _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
     if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ] && [ "${version}" = "${search_version}" ]; then
-      echo "${url_data//\;/\n}"
+      echo "${url_data/;/\n}"
     fi
   done
 }
@@ -491,34 +491,37 @@ _chpharos_subcommand_install() {
 
   echo "Retrieving version information .."
 
-  _chpharos_remote_version_url_data "${version}" | while IFS="|" read -r dl_filename dl_size dl_sha256 dl_url; do
-    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
+  file_datas=($(_chpharos_remote_version_url_data "${version}"))
+  for file_data in "${file_datas[@]}"; do
+    echo "${file_data}" | while IFS="|" read -r dl_filename dl_size dl_sha256 dl_url; do
+      echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
 
-    local destination="${destination_dir}/${dl_filename}"
+      local destination="${destination_dir}/${dl_filename}"
 
-    if command -v curl > /dev/null; then
-      _chpharos_get_curl "${dl_url}" "${destination}" "${dl_size}"
-    elif command -v wget > /dev/null; then
-      _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
-    else
-      rmdir "${destination_dir}" &> /dev/null
-      _chpharos_error_echo "curl or wget required for installing"; return 1
-    fi
+      if command -v curl > /dev/null; then
+        _chpharos_get_curl "${dl_url}" "${destination}" "${dl_size}"
+      elif command -v wget > /dev/null; then
+        _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
+      else
+        rmdir "${destination_dir}" &> /dev/null
+        _chpharos_error_echo "curl or wget required for installing"; return 1
+      fi
 
-    [ -f "${destination}" ] || continue
+      [ -f "${destination}" ] || continue
 
-    echo "Verifying download"
+      echo "Verifying download"
 
-    if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
-      chmod ug+x "${destination}"
-    else
-      rm -rf "${destination_dir}"
-      _chpharos_error_echo "checksum verification failed"
-    fi
+      if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
+        chmod ug+x "${destination}"
+      else
+        rm -rf "${destination_dir}"
+        _chpharos_error_echo "checksum verification failed"
+      fi
 
-    if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
-      ln -s "${destination_dir}/pharos-cluster" "${destination_dir}/pharos"
-    fi
+      if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
+        ln -s "${destination_dir}/pharos-cluster" "${destination_dir}/pharos"
+      fi
+    done
   done
 
   if [ ! -d "${destination_dir}" ] || [ -z "$(ls -A "${destination_dir}")" ]; then
