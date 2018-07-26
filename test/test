@@ -129,9 +129,10 @@ testChpharosReset() {
 }
 
 if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="$(dirname "${BASH_SOURCE[0]}")"
+  test_root="${BASH_SOURCE[0]%/*}"
 else
-  test_root="$(dirname "${(%):-%N}")"
+  test_root="${(%):-%N}"
+  test_root="${test_root%/*}"
   SHUNIT_PARENT=$0
   setopt shwordsplit
 fi

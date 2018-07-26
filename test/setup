@@ -1,9 +1,10 @@
 #!/bin/sh
 
 if [ -z "${ZSH_VERSION:-}" ]; then
-  test_root="$(dirname "${BASH_SOURCE[0]}")"
+  test_root="${BASH_SOURCE[0]%/*}"
 else
-  test_root="$(dirname "${(%):-%N}")"
+  test_root="${(%):-%N}"
+  test_root="${test_root%/*}"
 fi
 
 export CHPHAROS_ROOT="${test_root}/test-binaries"
