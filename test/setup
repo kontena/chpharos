@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 test_root=`dirname "${BASH_SOURCE[0]-$0}"`
 test_root=`cd "$test_root" && pwd`
