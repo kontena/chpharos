@@ -1,3 +1,2 @@
 setopt shwordsplit
-echo "READ ZSHRC"
-
+export PATH="/bin"

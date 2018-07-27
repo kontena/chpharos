@@ -303,16 +303,15 @@ _chpharos_reset() {
 }
 
 _chpharos_current_version_from_path() {
-  local path=":${PATH}:"
-  local remaining="${path}"
+  local work_path remaining
+  work_path=":${work_path}:"
+  remaining="${work_path}"
   remaining="${remaining#:$CHPHAROS_ROOT*:}"
-  remaining="${path%$remaining}"
+  remaining="${work_path%$remaining}"
   remaining="${remaining#:}"
   remaining="${remaining%:}"
-  remaining="${remaining#*versions/}"
-  echo "${remaining}"
+  echo "${remaining#*versions/}"
 }
-
 
 _chpharos_subcommand_use() {
   local destination
