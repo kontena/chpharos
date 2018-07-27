@@ -15,10 +15,10 @@ all:
 clean:
 	rm -rf test/binaries
 
-test/test-binaries:
+test/test-binaries/versions:
 	./test/setup
 
-test: test/test-binaries
+test: test/test-binaries/versions
 	SHELL=`command -v bash` ./test/runner
 	SHELL=`command -v zsh`  ./test/runner
 
