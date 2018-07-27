@@ -292,6 +292,7 @@ _chpharos_version_is_installed() {
 
 _chpharos_reset() {
   local current_version
+  _chpharos_auto_version_origin=""
   current_version="$(_chpharos_current_version_from_path)"
   [ -z "${current_version}" ] && return 0
   local current_version_root="${CHPHAROS_ROOT}/versions/${current_version}"
@@ -304,7 +305,7 @@ _chpharos_reset() {
 
 _chpharos_current_version_from_path() {
   local work_path remaining
-  work_path=":${work_path}:"
+  work_path=":${PATH}:"
   remaining="${work_path}"
   remaining="${remaining#:$CHPHAROS_ROOT*:}"
   remaining="${work_path%$remaining}"
