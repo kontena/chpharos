@@ -1,6 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
-export CHPHAROS_ROOT="$(dirname "$(realpath $0)")/test-binaries"
+test_root=`dirname "${BASH_SOURCE[0]-$0}"`
+test_root=`cd "$test_root" && pwd`
+
+export CHPHAROS_ROOT="${test_root}/test-binaries"
 mkdir -p "${CHPHAROS_ROOT}"
 
 [ -f "${CHPHAROS_ROOT}/versions/1.0.0/pharos-cluster" ] && \
@@ -10,7 +13,12 @@ mkdir -p "${CHPHAROS_ROOT}"
   echo "Already installed test binaries" && \
   exit 0
 
-. ../share/chpharos/chpharos.sh
+. "${test_root}"/../share/chpharos/chpharos.sh
+
+echo "Listing available versions:"
+chpharos list-remote
+
+echo "OS: $(_chpharos_os) CPU: $(_chpharos_cpu)"
 
 chpharos install 1.0.0
 chpharos install 1.2.2

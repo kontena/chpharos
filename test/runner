@@ -1,0 +1,17 @@
+#!/bin/bash
+
+error=0
+
+test_root=`dirname "${BASH_SOURCE[0]-$0}"`
+test_root=`cd "$test_root" && pwd`
+
+test_exec="${test_root}/test"
+export HOME="${test_root}/home"
+
+echo "Running $SHELL tests (interactive) ..."
+"$SHELL" -i "${test_exec}" || error=1
+
+echo "Running $SHELL tests (non-interactive) ..."
+"$SHELL" "${test_exec}" || error=1
+
+exit "$error"

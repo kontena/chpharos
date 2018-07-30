@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #
 #                                  Apache License
 #                            Version 2.0, January 2004
@@ -233,7 +231,7 @@ _chpharos_find_versionfile_ascending() {
   local current_path
   current_path="$(pwd)"
 
-  while ! [ -e "${current_path}/.pharos-version" ] && [ -n "${current_path}" ]; do
+  while [ ! -e "${current_path}/.pharos-version" ] && [ ! -n "${current_path}" ]; do
     current_path="${current_path%/*}"
   done
   [ -e "${current_path}/.pharos-version" ] && echo "${current_path}/.pharos-version"
@@ -241,12 +239,10 @@ _chpharos_find_versionfile_ascending() {
 
 _chpharos_auto() {
   local auto_version
+
   if [ -f "$PWD/.pharos-version" ]; then
     _chpharos_auto_version_origin="$PWD/.pharos-version file"
     auto_version=$(cat .pharos-version)
-  elif git rev-parse --is-inside-work-tree &> /dev/null && [ -e "$(git rev-parse --show-toplevel)/.pharos-version" ]; then
-    _chpharos_auto_version_origin="git repository root .pharos-version file"
-    auto_version=$(cat "$(git rev-parse --show-toplevel)/.pharos-version")
   else
     local ascending
     ascending="$(_chpharos_find_versionfile_ascending)"
@@ -296,6 +292,7 @@ _chpharos_version_is_installed() {
 
 _chpharos_reset() {
   local current_version
+  _chpharos_auto_version_origin=""
   current_version="$(_chpharos_current_version_from_path)"
   [ -z "${current_version}" ] && return 0
   local current_version_root="${CHPHAROS_ROOT}/versions/${current_version}"
@@ -307,16 +304,15 @@ _chpharos_reset() {
 }
 
 _chpharos_current_version_from_path() {
-  local path=":${PATH}:"
-  local remaining="${path}"
+  local work_path remaining
+  work_path=":${PATH}:"
+  remaining="${work_path}"
   remaining="${remaining#:$CHPHAROS_ROOT*:}"
-  remaining="${path%$remaining}"
+  remaining="${work_path%$remaining}"
   remaining="${remaining#:}"
   remaining="${remaining%:}"
-  remaining="${remaining#*versions/}"
-  echo "${remaining}"
+  echo "${remaining#*versions/}"
 }
-
 
 _chpharos_subcommand_use() {
   local destination
@@ -409,9 +405,9 @@ _chpharos_get_wget() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    (wget -O "${url}" | pv -s "${size}" > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+    wget -O "${url}" | pv -s "${size}" > "${destination}"
   else
-    wget -O "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+    wget -O "${url}" > "${destination}"
   fi
 }
 
@@ -421,9 +417,9 @@ _chpharos_get_curl() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    (curl -sL "${url}" | pv -s "${size}" > "${destination}") || (_chpharos_error_echo "download failed"; return 1)
+    curl -sL "${url}" | pv -s "${size}" > "${destination}"
   else
-    curl -sL "${url}" > "${destination}" || (_chpharos_error_echo "download failed"; return 1)
+    curl -sL "${url}" > "${destination}"
   fi
 }
 
@@ -449,16 +445,23 @@ _chpharos_remote_files() {
   fi
 }
 
-_chpharos_remote_version_url_data() {
-  local search_version search_os search_cpu
+_chpharos_find_remote_version() {
+  local search_version search_os search_cpu search_maturity
+
   search_version="$1"
+  if [[ "${search_version}" == *-* ]]; then
+    search_maturity="p"
+  else
+    search_maturity="s"
+  fi
+
   search_os="$(_chpharos_os)"
   search_cpu="$(_chpharos_cpu)"
-  _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
-    if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ] && [ "${version}" = "${search_version}" ]; then
-      echo "${url_data//\;/\n}"
-    fi
-  done
+  _chpharos_remote_files | grep "${search_version}|${search_maturity}|${search_os}|${search_cpu}|" | head -1
+}
+
+_chpharos_remote_version_url_data() {
+  _chpharos_find_remote_version "${1}" | cut -d"|" -f 5-
 }
 
 _chpharos_subcommand_install() {
@@ -493,8 +496,11 @@ _chpharos_subcommand_install() {
   local destination_dir="${CHPHAROS_ROOT}/versions/${version}"
   mkdir -p "${destination_dir}" &> /dev/null
 
-  _chpharos_remote_version_url_data "${version}" | while IFS="|" read -r dl_filename dl_size dl_sha256 dl_url; do
-    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url}"
+  echo "Retrieving information for version ${version}.."
+  url_data=($(_chpharos_remote_version_url_data "${version}" | tr ";" "\\n" ))
+  for file_data in "${url_data[@]}"; do
+    IFS="|" read -r dl_filename dl_size dl_sha256 dl_url <<<"${file_data}"
+    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
 
     local destination="${destination_dir}/${dl_filename}"
 
@@ -504,18 +510,18 @@ _chpharos_subcommand_install() {
       _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
     else
       rmdir "${destination_dir}" &> /dev/null
-      _chpharos_error_echo "curl or wget required for installing"; return 1
+      _chpharos_error_echo "curl or wget required for installing"; break
     fi
 
-    [ -f "${destination}" ] || continue
+    [ -f "${destination}" ] || break
 
     echo "Verifying download"
 
     if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
       chmod ug+x "${destination}"
     else
-      rm -f "${destination}"
-      _chpharos_error_echo "checksum verification failed"
+      rm -rf "${destination_dir}"
+      _chpharos_error_echo "checksum verification failed"; return 1
     fi
 
     if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
@@ -658,8 +664,10 @@ _chpharos_subcommand_auto() {
       preexec_functions+=("_chpharos_auto")
     fi
   elif [[ -n "$BASH_VERSION" ]]; then
+    set -T # inherit traps to subshells
     trap '[[ "$BASH_COMMAND" != "$PROMPT_COMMAND" ]] && _chpharos_auto' DEBUG
   fi
+  _chpharos_auto
 }
 
 _chpharos_subcommand_reset() {
@@ -692,6 +700,5 @@ chpharos() {
   fi
 }
 
-_chpharos_reset
+chpharos reset
 _chpharos_scan
-
