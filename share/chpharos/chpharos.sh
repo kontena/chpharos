@@ -689,7 +689,7 @@ chpharos() {
   else
     local subcommand
     subcommand="_chpharos_subcommand_$1"
-    subcommand="${subcommand//_--/_longdash}"
+    subcommand="${subcommand//_--/_longdash_}"
     subcommand="${subcommand//-/_}"
     if type "${subcommand}" | grep -q 'function'; then
       shift
