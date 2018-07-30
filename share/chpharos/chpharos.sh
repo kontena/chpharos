@@ -253,9 +253,15 @@ _chpharos_auto() {
   fi
 
   if [ ! -z "${auto_version}" ]; then
-    local old_origin="${_chpharos_auto_version_origin}"
-    _chpharos_subcommand_use "${auto_version}" > /dev/null
-    _chpharos_auto_version_origin="${old_origin}"
+    local current_version old_origin
+    current_version="$(_chpharos_current_version_from_path)"
+    if [ "${current_version}" = "${auto_version}" ]; then
+      return
+    else
+      old_origin="${_chpharos_auto_version_origin}"
+      _chpharos_subcommand_use "${auto_version}" > /dev/null
+      _chpharos_auto_version_origin="${old_origin}" # restore after chpharos use resets it
+    fi
   fi
 }
 
