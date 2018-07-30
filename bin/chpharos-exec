@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+chpharos_sh="${0%/*}/../share/chpharos/chpharos.sh"
+
+source "$chpharos_sh"
+
+case "$1" in
+	-h|--help)
+		echo "usage: chpharos-exec PHAROS_VERSION -- COMMAND [ARGS...]"
+		exit
+		;;
+	-V|--version)
+		echo "chpharos-exec $CHPHAROS_VERSION"
+		exit
+		;;
+esac
+
+if (( $# == 0 )); then
+	echo "chpharos-exec: PHAROS_VERSION and COMMAND required" >&2
+	exit 1
+fi
+
+chpharos_version="$1"
+shift
+
+if (( $# == 0)); then
+  echo "chpharos-exec: COMMAND required" >&2
+  exit 1
+fi
+
+shell_opts=("-l")
+[[ -t 0 ]] && shell_opts+=("-i")
+
+source_command="command -v chpharos >/dev/null || source $chpharos_sh"
+chpharos_command="chpharos use ${chpharos_version} > /dev/null"
+command="$source_command; $chpharos_command && exec $@"
+
+exec "$SHELL" -c "$command"

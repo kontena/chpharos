@@ -128,6 +128,21 @@ testChpharosReset() {
   assertFalse "path does not include $check_path" "[[ \"$PATH\" == *\"$check_path\"* ]]"
 }
 
+testChpharosExec() {
+  oPATH="${PATH}"
+  PATH="$CHPHAROS_BIN:$PATH"
+  assertEquals "chpharos-exec ${CHPHAROS_VERSION}" "$(chpharos-exec --version)"
+  version=$(chpharos-exec 1.0.0 pharos-cluster version | grep "pharos-cluster version")
+  assertEquals "pharos-cluster version 1.0.0" "${version}"
+  version=$(chpharos-exec 1.0.0 kubectl version --short --client)
+  assertEquals "Client Version: v1.10.1" "${version}"
+  version=$(chpharos-exec 1.2.2 pharos-cluster version | grep "pharos-cluster version")
+  assertEquals "  - pharos-cluster version 1.2.2" "${version}"
+  version=$(chpharos-exec 1.2.2 kubectl version --short --client)
+  assertEquals "Client Version: v1.10.5" "${version}"
+  PATH="${oPATH}"
+}
+
 [ ! -z "${ZSH_VERSION}" ] && SHUNIT_PARENT=$0 && setopt shwordsplit
 
 test_root=`dirname "${BASH_SOURCE[0]-$0}"`
@@ -135,6 +150,7 @@ test_root=`cd "$test_root" && pwd`
 
 export CHPHAROS_ROOT="${test_root}/test-binaries"
 export CHPHAROS_SRC="${test_root}/../share/chpharos/chpharos.sh"
+export CHPHAROS_BIN="${test_root}/../bin"
 
 echo "CHPHAROS_ROOT=${CHPHAROS_ROOT}"
 echo "CHPHAROS_SRC=${CHPHAROS_SRC}"
