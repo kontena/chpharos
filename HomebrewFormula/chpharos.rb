@@ -20,6 +20,6 @@ class Chpharos < Formula
   end
 
   test do
-    assert_equal "chpharos #{version}", shell_output("#{bin}/chpharos-exec --version").strip
+    assert_equal "chpharos-exec #{version}", shell_output("#{bin}/chpharos-exec --version").strip
   end
 end
