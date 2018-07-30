@@ -51,7 +51,7 @@ To install the latest version, use `chpharos install latest`
 
 ```
 mkdir -p ~/.pharos/chpharos && \
-  curl -sL https://raw.githubusercontent.com/kontena/chpharos/master/share/chpharos.sh > ~/.pharos/chpharos.sh && \
+  curl -sL https://raw.githubusercontent.com/kontena/chpharos/master/share/chpharos/chpharos.sh > ~/.pharos/chpharos.sh && \
   echo "source ~/.pharos/chpharos.sh" >> ~/.bash_profile
 ```
 
