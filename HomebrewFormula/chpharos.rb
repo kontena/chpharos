@@ -7,6 +7,8 @@ class Chpharos < Formula
 
   def install
     system "make", "install", "PREFIX=#{prefix}"
+    bash_completion.install "opt/bash-completion.sh" => "chpharos-completion.bash"
+    zsh_completion.install_symlink bash_completion/"chpharos-completion.bash" => "_chpharos"
   end
 
   def caveats; <<~EOS
