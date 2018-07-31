@@ -584,7 +584,7 @@ _chpharos_subcommand_current() {
       --all) full="true" ;;
       --short) short="true" ;;
       --help) cat <<EOF
-chpharos current [--debug] [--all]
+chpharos current [--short] [--all]
 
  --short   Do not display the "set via ..." version origin
  --all     List versions of all utilities in the bundle
