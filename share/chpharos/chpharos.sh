@@ -190,7 +190,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-CHPHAROS_VERSION=0.1.0
+CHPHAROS_VERSION=0.1.1
 
 if [ -z "${CHPHAROS_ROOT}" ]; then
   CHPHAROS_ROOT="$HOME/.pharos/chpharos"
