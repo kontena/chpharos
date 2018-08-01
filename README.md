@@ -46,6 +46,22 @@ To install the latest version, use `chpharos install latest`
 
 ## Installation
 
+### Via MacOS homebrew
+
+To install using the [Homebrew](https://brew.sh/) package manager, use:
+
+```
+brew tap kontena/chpharos https://github.com/kontena/chpharos
+brew install chpharos
+```
+
+### From source packages
+
+1. Download a source package from releases page
+2. Extract the archive and go into the extracted directory
+3. `make install`
+
+### Manually
 1. Download the [chpharos.sh](https://raw.githubusercontent.com/kontena/chpharos/master/share/chpharos.sh)
 2. Add a line to your shell's start-up configuration file (`.bash_profile`, `.zshrc`, ..) to load it: `source <path-to-chpharos.sh>`
 
@@ -70,6 +86,11 @@ echo "chpharos auto" >> ~/.bash_profile
 ```
 
 You can use `chpharos use --local 1.1.1` to create a `.pharos-version` file in the current directory or `chpharos use --default 1.1.1` to set a default version by creating a `.pharos-version` file in the `$HOME` directory.
+
+### Tab completions
+
+1. Download the [bash-complete.sh](https://raw.githubusercontent.com/kontena/chpharos/master/opt/bash-complete.sh)
+2. Place the file into the completion configuration directory (on your machine or add a line to your shell's start-up configuration file (`.bash_profile`, `.zshrc`, ..) to load it: `source <path-to-bash-complete.sh>`
 
 ## About Kontena Pharos
 
