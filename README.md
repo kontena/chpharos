@@ -51,8 +51,7 @@ To install the latest version, use `chpharos install latest`
 To install using the [Homebrew](https://brew.sh/) package manager, use:
 
 ```
-brew tap kontena/chpharos https://github.com/kontena/chpharos
-brew install chpharos
+brew install kontena/chpharos/chpharos
 ```
 
 Then follow the instructions in the post install message to add it to your shell startup scripts.
