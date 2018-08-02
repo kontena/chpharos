@@ -55,6 +55,8 @@ brew tap kontena/chpharos https://github.com/kontena/chpharos
 brew install chpharos
 ```
 
+Then follow the instructions in the post install message to add it to your shell startup scripts.
+
 ### From source packages
 
 1. Download a source package from releases page
