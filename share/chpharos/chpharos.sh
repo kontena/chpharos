@@ -401,32 +401,21 @@ _chpharos_subcommand_version() {
   _chpharos_subcommand_current -
 }
 
-_chpharos_pv_is_installed() {
-  command -v pv > /dev/null
-}
-
 _chpharos_get_wget() {
   local url="$1"
   local destination="$2"
-  local size="$3"
+  local progress_opt
 
-  if _chpharos_pv_is_installed; then
-    wget -O "${url}" | pv -s "${size}" > "${destination}"
-  else
-    wget -O "${url}" > "${destination}"
-  fi
+  progress_opt="-q --show-progress --progress=bar:force:noscroll"
+  wget --help | grep "\--show-progress" &> /dev/null || progress_opt=""
+  eval wget $progress_opt --output-document="${destination}" "${url}"
 }
 
 _chpharos_get_curl() {
   local url="$1"
   local destination="$2"
-  local size="$3"
 
-  if _chpharos_pv_is_installed; then
-    curl -sL "${url}" | pv -s "${size}" > "${destination}"
-  else
-    curl -sL "${url}" > "${destination}"
-  fi
+  curl "-#" -L "${url}" --output "${destination}"
 }
 
 _chpharos_sha_verify() {
@@ -510,10 +499,10 @@ _chpharos_subcommand_install() {
 
     local destination="${destination_dir}/${dl_filename}"
 
-    if command -v curl > /dev/null; then
-      _chpharos_get_curl "${dl_url}" "${destination}" "${dl_size}"
+    if [ -z "${NO_CURL}" ] && command -v curl > /dev/null; then
+      _chpharos_get_curl "${dl_url}" "${destination}"
     elif command -v wget > /dev/null; then
-      _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
+      _chpharos_get_wget "${dl_url}" "${destination}"
     else
       rmdir "${destination_dir}" &> /dev/null
       _chpharos_error_echo "curl or wget required for installing"; break
