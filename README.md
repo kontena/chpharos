@@ -1,4 +1,4 @@
-# Chpharos - Kontena Pharos version switcher
+# chpharos - Kontena Pharos version switcher
 
 Install and use multiple versions of [pharos-cluster](https://github.com/kontena/pharos-cluster) and the compatible tools such as [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) for each.
 
