@@ -10,10 +10,6 @@ Install and use multiple versions of [pharos-cluster](https://github.com/kontena
 - A tool for downloading files (currently supported: [curl](https://curl.haxx.se/) and [wget](https://www.gnu.org/software/wget/), usually already installed on compatible systems)
 - File checksum verification tool [shasum](https://linux.die.net/man/1/shasum), usually already installed on compatible systems.
 
-### Optional
-
-- [pv](https://linux.die.net/man/1/pv) for displaying download progress bar
-
 ## Usage and features
 
 ### List available versions
