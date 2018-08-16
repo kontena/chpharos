@@ -192,20 +192,105 @@
 
 CHPHAROS_VERSION=0.1.1
 
+if [ -z "${CHPHAROS_CFG}" ]; then
+  CHPHAROS_CFG="$HOME/.chpharosrc"
+fi
+
+# Load config
+[ -f "${CHPHAROS_CFG}" ] && . "${CHPHAROS_CFG}"
+
 if [ -z "${CHPHAROS_ROOT}" ]; then
   CHPHAROS_ROOT="$HOME/.pharos/chpharos"
 fi
 
-if [ -z "${CHPHAROS_VERSION_LIST_URL}" ]; then
-  CHPHAROS_VERSION_LIST_URL="https://raw.githubusercontent.com/kontena/chpharos/master/versions.config"
+if [ -z "${CHPHAROS_SVC_URL}" ]; then
+  CHPHAROS_SVC_URL="https://get.pharos.sh"
+fi
+
+if [ -z "${CHPHAROS_WEB_CLIENT}" ]; then
+  CHPHAROS_WEB_CLIENT=$(basename $(command -v curl || command -v wget || echo "none"))
+  [ "${CHPHAROS_WEB_CLIENT}" = "none" ] && _chpharos_error_echo "curl or wget required" && return 1
 fi
 
 PHAROS_VERSIONS=()
+
+_chpharos_write_token() {
+  [ -f "${CHPHAROS_CFG}" ]  && mv "${CHPHAROS_CFG}" "${CHPHAROS_CFG}.1" && grep -v CHPHAROS_TOKEN "${CHPHAROS_CFG}.1" > "${CHPHAROS_CFG}" && rm -f "${CHPHAROS_CFG}.1"
+  [ ! -z "$1" ] && echo "CHPHAROS_TOKEN=\"$1\"" >> "${CHPHAROS_CFG}"
+}
+
+_chpharos_login_curl() {
+  local username password
+  username="$1"
+  password="$2"
+  curl -sSL -XPOST "${CHPHAROS_SVC_URL}/auth" \
+    -d "username=${username}&password=${password}&grant_type=password" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -A "chpharos-$CHPHAROS_VERSION+curl"
+}
+
+_chpharos_login_wget() {
+  local username password
+  username="$1"
+  password="$2"
+  wget "${CHPHAROS_SVC_URL}/auth" \
+    -O - \
+    --quiet \
+    --post-data="username=${username}&password=${password}&grant_type=password" \
+    -U "chpharos-$CHPHAROS_VERSION+wget"
+}
+
+_chpharos_subcommand_login() {
+  echo "Log in using your Kontena Cloud credentials"
+  echo -n "Username: "
+  read username
+  echo -n "Password: "
+  read -s password
+  echo -n '\n'
+
+  local token
+  token=$(_chpharos_login_$CHPHAROS_WEB_CLIENT "${username}" "${password}")
+
+  if [ "${#token}" -eq 64 ]; then
+    _chpharos_write_token "${token}"
+    echo "Logged in"
+    CHPHAROS_TOKEN="${token}"
+  else
+    unset CHPHAROS_TOKEN
+    _chpharos_error_echo "Login failed: ${token}" && return 1
+  fi
+}
+
+_chpharos_logout_curl() {
+  [ -z "${CHPHAROS_TOKEN}" ] && return
+  curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \
+    -A "chpharos-$CHPHAROS_VERSION+curl" \
+    -H "Authorization: Bearer ${CHPHAROS_TOKEN}" &> /dev/null
+}
+
+_chpharos_logout_wget() {
+  wget --help | grep "\--method" &> /dev/null || (_chpharos_error_echo "Your version of wget does not have the --method option to send DELETE requests, the token will remain valid."; return 1)
+  wget "${CHPHAROS_SVC_URL}/auth" \
+    -O - \
+    --quiet \
+    --method DELETE \
+    -U "chpharos-$CHPHAROS_VERSION+wget" \
+    --header="Authorization: Bearer ${CHPHAROS_TOKEN}" &> /dev/null
+}
+
+_chpharos_subcommand_logout() {
+  _chpharos_logout_${CHPHAROS_WEB_CLIENT}
+  unset CHPHAROS_TOKEN
+  _chpharos_write_token ""
+}
 
 _chpharos_scan() {
   local unsorted_versions=""
   local pharos_version
   PHAROS_VERSIONS=()
+
+  # Bail out if dir doesn't exist
+  [ ! -d "${CHPHAROS_ROOT}/versions" ] && return 0
 
   # Build a list of versions where non prerelease version numbers get suffixed with _ for sorting reasons
   for pharos_version in "${CHPHAROS_ROOT}"/versions/*.*.*; do
@@ -270,7 +355,9 @@ _chpharos_error_echo() {
 }
 
 _chpharos_os() {
-  if uname -s | grep -q Darwin; then
+  if [ ! -z "${CHPHAROS_OS}" ]; then
+    echo "$CHPHAROS_OS"
+  elif uname -s | grep -q Darwin; then
     echo "darwin"
   else
     echo "linux"
@@ -388,6 +475,9 @@ chpharos list-remote [--pre]                List remote Kontena Pharos versions 
 chpharos reset                              Remove chpharos path modifications and disable automatic switching
 chpharos auto                               Load automatic version switcher
 
+chpharos login                              Log in using your Kontena Account credentials
+chpharos logout                             Log out
+
 chpharos --help                             Show this help
 chpharos --version                          Show chpharos version ${CHPHAROS_VERSION}
 EOF
@@ -411,9 +501,9 @@ _chpharos_get_wget() {
   local size="$3"
 
   if _chpharos_pv_is_installed; then
-    wget -O "${url}" | pv -s "${size}" > "${destination}"
+    wget -O - --quiet "${url}" | pv -s "${size}" > "${destination}"
   else
-    wget -O "${url}" > "${destination}"
+    wget -O - "${url}" > "${destination}"
   fi
 }
 
@@ -436,19 +526,27 @@ _chpharos_sha_verify() {
 }
 
 
+_chpharos_remote_files_curl() {
+  curl -sSL "${CHPHAROS_SVC_URL}/versions" \
+    -A "chpharos-$CHPHAROS_VERSION+curl" \
+    -H "Authorization: Bearer ${CHPHAROS_TOKEN}"
+}
+
+_chpharos_remote_files_wget() {
+  wget "${CHPHAROS_SVC_URL}/versions" \
+    -o /dev/null \
+    -O - \
+    -U "chpharos-$CHPHAROS_VERSION+wget" \
+    --header "Authorization: Bearer ${CHPHAROS_TOKEN}"
+}
+
 # First level fields are separated by |
 # version|is_stable|os|cpu|urls
 #
 # The url_data field is separated by ;
 # fname|size|sha|url;fname2|size2|sha2|url2
 _chpharos_remote_files() {
-  if command -v curl > /dev/null; then
-    curl -sL "${CHPHAROS_VERSION_LIST_URL}"
-  elif command -v wget > /dev/null; then
-    wget "${CHPHAROS_VERSION_LIST_URL}" -o /dev/null -O -
-  else
-    _chpharos_error_echo "curl or wget required for listing"; return 1
-  fi
+  _chpharos_remote_files_${CHPHAROS_WEB_CLIENT} || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
 }
 
 _chpharos_find_remote_version() {
@@ -472,6 +570,7 @@ _chpharos_remote_version_url_data() {
 
 _chpharos_subcommand_install() {
   _chpharos_validate_external_tools || return 1
+  [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
   local force
 
@@ -510,14 +609,7 @@ _chpharos_subcommand_install() {
 
     local destination="${destination_dir}/${dl_filename}"
 
-    if command -v curl > /dev/null; then
-      _chpharos_get_curl "${dl_url}" "${destination}" "${dl_size}"
-    elif command -v wget > /dev/null; then
-      _chpharos_get_wget "${dl_url}" "${destination}" "${dl_size}"
-    else
-      rmdir "${destination_dir}" &> /dev/null
-      _chpharos_error_echo "curl or wget required for installing"; break
-    fi
+    _chpharos_get_${CHPHAROS_WEB_CLIENT} "${dl_url}" "${destination}" "${dl_size}"
 
     [ -f "${destination}" ] || break
 
@@ -620,6 +712,7 @@ EOF
 
 _chpharos_subcommand_list_remote() {
   _chpharos_validate_external_tools || return 1
+  [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
   local search_os search_cpu
 
