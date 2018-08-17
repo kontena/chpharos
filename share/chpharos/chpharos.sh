@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #
 #                                  Apache License
 #                            Version 2.0, January 2004
@@ -197,7 +199,10 @@ if [ -z "${CHPHAROS_CFG}" ]; then
 fi
 
 # Load config
-[ -f "${CHPHAROS_CFG}" ] && . "${CHPHAROS_CFG}"
+if [ -f "${CHPHAROS_CFG}" ]; then
+  # shellcheck disable=SC1091,SC1090
+  . "${CHPHAROS_CFG}"
+fi
 
 if [ -z "${CHPHAROS_ROOT}" ]; then
   CHPHAROS_ROOT="$HOME/.pharos/chpharos"
@@ -208,7 +213,7 @@ if [ -z "${CHPHAROS_SVC_URL}" ]; then
 fi
 
 if [ -z "${CHPHAROS_WEB_CLIENT}" ]; then
-  CHPHAROS_WEB_CLIENT=$(basename $(command -v curl || command -v wget || echo "none"))
+  CHPHAROS_WEB_CLIENT="$(basename "$(command -v curl || command -v wget || echo "none")")"
   [ "${CHPHAROS_WEB_CLIENT}" = "none" ] && _chpharos_error_echo "curl or wget required" && return 1
 fi
 
@@ -242,14 +247,14 @@ _chpharos_login_wget() {
 
 _chpharos_subcommand_login() {
   echo "Log in using your Kontena Cloud credentials"
-  echo -n "Username: "
-  read username
-  echo -n "Password: "
-  read -s password
-  echo -n '\n'
+  printf "Username: "
+  read -r username
+  printf "Password: "
+  read -r -s password
+  printf '\n'
 
   local token
-  token=$(_chpharos_login_$CHPHAROS_WEB_CLIENT "${username}" "${password}")
+  token=$("_chpharos_login_$CHPHAROS_WEB_CLIENT" "${username}" "${password}")
 
   if [ "${#token}" -eq 64 ]; then
     _chpharos_write_token "${token}"
@@ -268,7 +273,7 @@ _chpharos_logout_curl() {
 }
 
 _chpharos_logout_wget() {
-  wget --help | grep "\--method" &> /dev/null || (_chpharos_error_echo "Your version of wget does not have the --method option to send DELETE requests, the token will remain valid."; return 1)
+  wget --help | grep -- "--method" &> /dev/null || (_chpharos_error_echo "Your version of wget does not have the --method option to send DELETE requests, the token will remain valid."; return 1)
   wget "${CHPHAROS_SVC_URL}/auth" \
     -O - \
     --quiet \
@@ -278,7 +283,7 @@ _chpharos_logout_wget() {
 }
 
 _chpharos_subcommand_logout() {
-  _chpharos_logout_${CHPHAROS_WEB_CLIENT}
+  "_chpharos_logout_${CHPHAROS_WEB_CLIENT}"
   unset CHPHAROS_TOKEN
   _chpharos_write_token ""
 }
@@ -487,57 +492,51 @@ _chpharos_subcommand_longdash_version() {
 }
 
 _chpharos_subcommand_version() {
-  _chpharos_subcommand_current -
-}
-
-_chpharos_pv_is_installed() {
-  command -v pv > /dev/null
+  _chpharos_subcommand_current
 }
 
 _chpharos_auth_header() {
   echo "Authorization: Bearer ${CHPHAROS_TOKEN}"
 }
 
-_chpharos_get_wget() {
+_chpharos_get_file_wget() {
   local url="$1"
   local destination="$2"
-  local size="$3"
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
-    wget -O - --quiet -U "chpharos/${CHPHAROS_VERSION}+wget" --header="$(_chpharos_auth_header)" "${url}" | read -r final_url
+    final_url="$(wget -O - --quiet -U "chpharos/${CHPHAROS_VERSION}+wget" --header="$(_chpharos_auth_header)" "${url}")"
     [ -z "${final_url}" ] && return 1
   else
     final_url="${url}"
   fi
   [ -z "${final_url}" ] && return 1
 
-  if _chpharos_pv_is_installed; then
-    wget -O - --quiet "${final_url}" | pv -s "${size}" > "${destination}"
+  local progress_opt
+  progress_opt=""
+  wget --help | grep -- "--show-progress" &> /dev/null && progress_opt="1"
+
+  if [ -z "${progress_opt}" ]; then
+    wget "${final_url}" --output-document="${destination}"
   else
-    wget -O - "${final_url}" > "${destination}"
+    wget -q --show-progress --progress=bar:force:noscroll --output-document="${destination}" "${final_url}"
   fi
 }
 
-_chpharos_get_curl() {
+_chpharos_get_file_curl() {
   local url="$1"
   local destination="$2"
-  local size="$3"
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
-    curl -sL -A "chpharos/$CHPHAROS_VERSION+curl" -H "$(_chpharos_auth_header)" "${url}" | read -r final_url
+    final_url="$(curl -sSL -A "chpharos/$CHPHAROS_VERSION+curl" -H "$(_chpharos_auth_header)" "${url}")"
   else
     final_url="${url}"
   fi
 
   [ -z "${final_url}" ] && return 1
 
-  if _chpharos_pv_is_installed; then
-    curl -sL "${final_url}" | pv -s "${size}" > "${destination}"
-  else
-    curl -sL "${final_url}" > "${destination}"
-  fi
+  curl "-#" -SL "${final_url}" --output "${destination}"
 }
 
 _chpharos_sha_verify() {
@@ -545,7 +544,6 @@ _chpharos_sha_verify() {
   local checksum="$2"
   echo "${checksum}  ${file_path}" | shasum -a 256 -c - &> /dev/null
 }
-
 
 _chpharos_remote_versions_curl() {
   curl -sSL "${CHPHAROS_SVC_URL}/versions$1" \
@@ -568,7 +566,7 @@ _chpharos_remote_versions() {
   else
     pre=""
   fi
-  _chpharos_remote_versions_${CHPHAROS_WEB_CLIENT} $pre || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
+  "_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" "${pre}" || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
 }
 
 _chpharos_remote_version_url_data_curl() {
@@ -586,7 +584,8 @@ _chpharos_remote_version_url_data_wget() {
 }
 
 _chpharos_remote_version_url_data() {
-  _chpharos_remote_version_url_data_${CHPHAROS_WEB_CLIENT} "$1"
+  # shellcheck disable=SC2207
+  "_chpharos_remote_version_url_data_${CHPHAROS_WEB_CLIENT}" "$1"
 }
 
 _chpharos_subcommand_install() {
@@ -623,6 +622,7 @@ _chpharos_subcommand_install() {
   mkdir -p "${destination_dir}" &> /dev/null
 
   local url_datas
+  # shellcheck disable=SC2207
   url_datas=($(_chpharos_remote_version_url_data "${version}"))
 
   for url_data in "${url_datas[@]}"; do
@@ -631,17 +631,18 @@ _chpharos_subcommand_install() {
 
     local destination="${destination_dir}/${dl_filename}"
 
-    _chpharos_get_${CHPHAROS_WEB_CLIENT} "${dl_url}" "${destination}" "${dl_size}"
+    "_chpharos_get_file_${CHPHAROS_WEB_CLIENT}" "${dl_url}" "${destination}" "${dl_size}"
 
     [ -f "${destination}" ] || break
 
-    echo "Verifying download"
+    echo -n "Verifying download SHA256 checksum.. "
 
     if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
+    echo "OK"
       chmod ug+x "${destination}"
     else
       rm -rf "${destination_dir}"
-      _chpharos_error_echo "checksum verification failed"; return 1
+      _chpharos_error_echo "checksum verification failed"; break
     fi
 
     if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
@@ -693,7 +694,7 @@ _chpharos_subcommand_info() {
       fi
     done
   else
-    _chpharos_error_echo "no such version"; return 1
+    _chpharos_error_echo "version ${version} not installed"; return 1
   fi
 }
 
@@ -784,10 +785,8 @@ _chpharos_subcommand_auto() {
 
 _chpharos_subcommand_reset() {
   if [[ -n "$ZSH_VERSION" ]]; then
-    if [[ "$preexec_functions" == *_chpharos_auto* ]]; then
-      local delete
-      delete=("_chpharos_auto")
-      preexec_functions=("${preexec_functions[@]/$delete}")
+    if [[ "${preexec_functions[*]}" == *_chpharos_auto* ]]; then
+      preexec_functions=("${preexec_functions[@]/_chpharos_auto}")
     fi
   elif [[ -n "$BASH_VERSION" ]]; then
     trap - DEBUG
