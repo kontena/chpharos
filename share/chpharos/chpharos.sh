@@ -248,7 +248,9 @@ _chpharos_login_wget() {
 }
 
 _chpharos_subcommand_login() {
-  echo "Log in using your Kontena Cloud credentials"
+  echo "Log in using your Kontena Account credentials"
+  echo "Visit https://account.kontena.io/ to register a new account."
+  printf '\n'
   printf "Username: "
   read -r username
   printf "Password: "
