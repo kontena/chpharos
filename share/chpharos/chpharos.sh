@@ -226,7 +226,7 @@ _chpharos_login_curl() {
   curl -sSL -XPOST "${CHPHAROS_SVC_URL}/auth" \
     -d "username=${username}&password=${password}&grant_type=password" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -A "chpharos-$CHPHAROS_VERSION+curl"
+    -A "chpharos/$CHPHAROS_VERSION+curl"
 }
 
 _chpharos_login_wget() {
@@ -237,7 +237,7 @@ _chpharos_login_wget() {
     -O - \
     --quiet \
     --post-data="username=${username}&password=${password}&grant_type=password" \
-    -U "chpharos-$CHPHAROS_VERSION+wget"
+    -U "chpharos/$CHPHAROS_VERSION+wget"
 }
 
 _chpharos_subcommand_login() {
@@ -260,12 +260,11 @@ _chpharos_subcommand_login() {
     _chpharos_error_echo "Login failed: ${token}" && return 1
   fi
 }
-
 _chpharos_logout_curl() {
   [ -z "${CHPHAROS_TOKEN}" ] && return
   curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \
-    -A "chpharos-$CHPHAROS_VERSION+curl" \
-    -H "Authorization: Bearer ${CHPHAROS_TOKEN}" &> /dev/null
+    -A "chpharos/$CHPHAROS_VERSION+curl" \
+    -H "$(_chpharos_auth_header)" &> /dev/null
 }
 
 _chpharos_logout_wget() {
@@ -274,8 +273,8 @@ _chpharos_logout_wget() {
     -O - \
     --quiet \
     --method DELETE \
-    -U "chpharos-$CHPHAROS_VERSION+wget" \
-    --header="Authorization: Bearer ${CHPHAROS_TOKEN}" &> /dev/null
+    -U "chpharos/$CHPHAROS_VERSION+wget" \
+    --header="$(_chpharos_auth_header)" &> /dev/null
 }
 
 _chpharos_subcommand_logout() {
@@ -495,15 +494,28 @@ _chpharos_pv_is_installed() {
   command -v pv > /dev/null
 }
 
+_chpharos_auth_header() {
+  echo "Authorization: Bearer ${CHPHAROS_TOKEN}"
+}
+
 _chpharos_get_wget() {
   local url="$1"
   local destination="$2"
   local size="$3"
 
-  if _chpharos_pv_is_installed; then
-    wget -O - --quiet "${url}" | pv -s "${size}" > "${destination}"
+  local final_url
+  if [ -z "${url##*get.pharos.sh*}" ]; then
+    wget -O - --quiet -U "chpharos/${CHPHAROS_VERSION}+wget" --header="$(_chpharos_auth_header)" "${url}" | read -r final_url
+    [ -z "${final_url}" ] && return 1
   else
-    wget -O - "${url}" > "${destination}"
+    final_url="${url}"
+  fi
+  [ -z "${final_url}" ] && return 1
+
+  if _chpharos_pv_is_installed; then
+    wget -O - --quiet "${final_url}" | pv -s "${size}" > "${destination}"
+  else
+    wget -O - "${final_url}" > "${destination}"
   fi
 }
 
@@ -512,10 +524,19 @@ _chpharos_get_curl() {
   local destination="$2"
   local size="$3"
 
-  if _chpharos_pv_is_installed; then
-    curl -sL "${url}" | pv -s "${size}" > "${destination}"
+  local final_url
+  if [ -z "${url##*get.pharos.sh*}" ]; then
+    curl -sL -A "chpharos/$CHPHAROS_VERSION+curl" -H "$(_chpharos_auth_header)" "${url}" | read -r final_url
   else
-    curl -sL "${url}" > "${destination}"
+    final_url="${url}"
+  fi
+
+  [ -z "${final_url}" ] && return 1
+
+  if _chpharos_pv_is_installed; then
+    curl -sL "${final_url}" | pv -s "${size}" > "${destination}"
+  else
+    curl -sL "${final_url}" > "${destination}"
   fi
 }
 
@@ -526,46 +547,46 @@ _chpharos_sha_verify() {
 }
 
 
-_chpharos_remote_files_curl() {
-  curl -sSL "${CHPHAROS_SVC_URL}/versions" \
-    -A "chpharos-$CHPHAROS_VERSION+curl" \
-    -H "Authorization: Bearer ${CHPHAROS_TOKEN}"
+_chpharos_remote_versions_curl() {
+  curl -sSL "${CHPHAROS_SVC_URL}/versions$1" \
+    -A "chpharos/$CHPHAROS_VERSION+curl" \
+    -H "$(_chpharos_auth_header)"
 }
 
-_chpharos_remote_files_wget() {
-  wget "${CHPHAROS_SVC_URL}/versions" \
+_chpharos_remote_versions_wget() {
+  wget "${CHPHAROS_SVC_URL}/versions$1" \
     -o /dev/null \
     -O - \
-    -U "chpharos-$CHPHAROS_VERSION+wget" \
-    --header "Authorization: Bearer ${CHPHAROS_TOKEN}"
+    -U "chpharos/$CHPHAROS_VERSION+wget" \
+    --header="$(_chpharos_auth_header)"
 }
 
-# First level fields are separated by |
-# version|is_stable|os|cpu|urls
-#
-# The url_data field is separated by ;
-# fname|size|sha|url;fname2|size2|sha2|url2
-_chpharos_remote_files() {
-  _chpharos_remote_files_${CHPHAROS_WEB_CLIENT} || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
-}
-
-_chpharos_find_remote_version() {
-  local search_version search_os search_cpu search_maturity
-
-  search_version="$1"
-  if [[ "${search_version}" == *-* ]]; then
-    search_maturity="p"
+_chpharos_remote_versions() {
+  local pre
+  if [ "$1" = "--pre" ]; then
+    pre="?pre=true"
   else
-    search_maturity="s"
+    pre=""
   fi
+  _chpharos_remote_versions_${CHPHAROS_WEB_CLIENT} $pre || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
+}
 
-  search_os="$(_chpharos_os)"
-  search_cpu="$(_chpharos_cpu)"
-  _chpharos_remote_files | grep "${search_version}|${search_maturity}|${search_os}|${search_cpu}|" | head -1
+_chpharos_remote_version_url_data_curl() {
+  curl -sSL "${CHPHAROS_SVC_URL}/versions/files/$1?os=$(_chpharos_os)&cpu=$(_chpharos_cpu)" \
+    -A "chpharos/$CHPHAROS_VERSION+curl" \
+    -H "$(_chpharos_auth_header)"
+}
+
+_chpharos_remote_version_url_data_wget() {
+  wget "${CHPHAROS_SVC_URL}/versions/files/$1?os=$(_chpharos_os)&cpu=$(_chpharos_cpu)" \
+    -o /dev/null \
+    -O - \
+    -U "chpharos/$CHPHAROS_VERSION+wget" \
+    --header="$(_chpharos_auth_header)"
 }
 
 _chpharos_remote_version_url_data() {
-  _chpharos_find_remote_version "${1}" | cut -d"|" -f 5-
+  _chpharos_remote_version_url_data_${CHPHAROS_WEB_CLIENT} "$1"
 }
 
 _chpharos_subcommand_install() {
@@ -590,7 +611,7 @@ _chpharos_subcommand_install() {
   fi
 
   if [ "${version}" = "latest" ]; then
-    version=$(_chpharos_remote_files | head -1 | cut -d "|" -f 1)
+    version=$(_chpharos_remote_files | head -1)
   fi
 
   if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
@@ -601,10 +622,11 @@ _chpharos_subcommand_install() {
   local destination_dir="${CHPHAROS_ROOT}/versions/${version}"
   mkdir -p "${destination_dir}" &> /dev/null
 
-  echo "Retrieving information for version ${version}.."
-  url_data=($(_chpharos_remote_version_url_data "${version}" | tr ";" "\\n" ))
-  for file_data in "${url_data[@]}"; do
-    IFS="|" read -r dl_filename dl_size dl_sha256 dl_url <<<"${file_data}"
+  local url_datas
+  url_datas=($(_chpharos_remote_version_url_data "${version}"))
+
+  for url_data in "${url_datas[@]}"; do
+    IFS="|" read -r dl_filename dl_size dl_sha256 dl_url <<<"${url_data}"
     echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
 
     local destination="${destination_dir}/${dl_filename}"
@@ -714,20 +736,11 @@ _chpharos_subcommand_list_remote() {
   _chpharos_validate_external_tools || return 1
   [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
-  local search_os search_cpu
-
-  search_os=$(_chpharos_os)
-  search_cpu=$(_chpharos_cpu)
-
-  _chpharos_remote_files | while IFS="|" read -r version stable os cpu url_data; do
-    if [ "${os}" = "${search_os}" ] && [ "${cpu}" = "${search_cpu}" ]; then
-      if [ "${stable}" = "s" ] || [ "$1" = "--pre" ]; then
-        if _chpharos_version_is_installed "${version}"; then
-          echo "${version} (installed)"
-        else
-          echo "${version}"
-        fi
-      fi
+  _chpharos_remote_versions "$1" | while IFS="|" read -r version; do
+    if _chpharos_version_is_installed "${version}"; then
+      echo "${version} (installed)"
+    else
+      echo "${version}"
     fi
   done
 }
