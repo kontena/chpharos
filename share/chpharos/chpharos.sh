@@ -217,6 +217,8 @@ if [ -z "${CHPHAROS_WEB_CLIENT}" ]; then
   [ "${CHPHAROS_WEB_CLIENT}" = "none" ] && _chpharos_error_echo "curl or wget required" && return 1
 fi
 
+CHPHAROS_UA="chpharos/${CHPHAROS_VERSION}+$(_chpharos_os)+${CHPHAROS_WEB_CLIENT}"
+
 PHAROS_VERSIONS=()
 
 _chpharos_write_token() {
@@ -231,7 +233,7 @@ _chpharos_login_curl() {
   curl -sSL -XPOST "${CHPHAROS_SVC_URL}/auth" \
     -d "username=${username}&password=${password}&grant_type=password" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -A "chpharos/$CHPHAROS_VERSION+curl"
+    -A "${CHPHAROS_UA}"
 }
 
 _chpharos_login_wget() {
@@ -242,7 +244,7 @@ _chpharos_login_wget() {
     -O - \
     --quiet \
     --post-data="username=${username}&password=${password}&grant_type=password" \
-    -U "chpharos/$CHPHAROS_VERSION+wget"
+    -U "${CHPHAROS_UA}"
 }
 
 _chpharos_subcommand_login() {
@@ -268,7 +270,7 @@ _chpharos_subcommand_login() {
 _chpharos_logout_curl() {
   [ -z "${CHPHAROS_TOKEN}" ] && return
   curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \
-    -A "chpharos/$CHPHAROS_VERSION+curl" \
+    -A "${CHPHAROS_UA}" \
     -H "$(_chpharos_auth_header)" &> /dev/null
 }
 
@@ -278,7 +280,7 @@ _chpharos_logout_wget() {
     -O - \
     --quiet \
     --method DELETE \
-    -U "chpharos/$CHPHAROS_VERSION+wget" \
+    -U "${CHPHAROS_UA}" \
     --header="$(_chpharos_auth_header)" &> /dev/null
 }
 
@@ -359,6 +361,7 @@ _chpharos_error_echo() {
 }
 
 _chpharos_os() {
+  #shellcheck disable=SC2153
   if [ ! -z "${CHPHAROS_OS}" ]; then
     echo "$CHPHAROS_OS"
   elif uname -s | grep -q Darwin; then
@@ -492,7 +495,7 @@ _chpharos_subcommand_longdash_version() {
 }
 
 _chpharos_subcommand_version() {
-  _chpharos_subcommand_current
+  _chpharos_subcommand_current -
 }
 
 _chpharos_auth_header() {
@@ -505,7 +508,7 @@ _chpharos_get_file_wget() {
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
-    final_url="$(wget -O - --quiet -U "chpharos/${CHPHAROS_VERSION}+wget" --header="$(_chpharos_auth_header)" "${url}")"
+    final_url="$(wget -O - --quiet -U "${CHPHAROS_UA}" --header="$(_chpharos_auth_header)" "${url}")"
     [ -z "${final_url}" ] && return 1
   else
     final_url="${url}"
@@ -529,7 +532,7 @@ _chpharos_get_file_curl() {
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
-    final_url="$(curl -sSL -A "chpharos/$CHPHAROS_VERSION+curl" -H "$(_chpharos_auth_header)" "${url}")"
+    final_url="$(curl -sSL -A "${CHPHAROS_UA}" -H "$(_chpharos_auth_header)" "${url}")"
   else
     final_url="${url}"
   fi
@@ -547,7 +550,7 @@ _chpharos_sha_verify() {
 
 _chpharos_remote_versions_curl() {
   curl -sSL "${CHPHAROS_SVC_URL}/versions$1" \
-    -A "chpharos/$CHPHAROS_VERSION+curl" \
+    -A "${CHPHAROS_UA}" \
     -H "$(_chpharos_auth_header)"
 }
 
@@ -555,7 +558,7 @@ _chpharos_remote_versions_wget() {
   wget "${CHPHAROS_SVC_URL}/versions$1" \
     -o /dev/null \
     -O - \
-    -U "chpharos/$CHPHAROS_VERSION+wget" \
+    -U "${CHPHAROS_UA}" \
     --header="$(_chpharos_auth_header)"
 }
 
@@ -571,7 +574,7 @@ _chpharos_remote_versions() {
 
 _chpharos_remote_version_url_data_curl() {
   curl -sSL "${CHPHAROS_SVC_URL}/versions/files/$1?os=$(_chpharos_os)&cpu=$(_chpharos_cpu)" \
-    -A "chpharos/$CHPHAROS_VERSION+curl" \
+    -A "${CHPHAROS_UA}" \
     -H "$(_chpharos_auth_header)"
 }
 
@@ -579,7 +582,7 @@ _chpharos_remote_version_url_data_wget() {
   wget "${CHPHAROS_SVC_URL}/versions/files/$1?os=$(_chpharos_os)&cpu=$(_chpharos_cpu)" \
     -o /dev/null \
     -O - \
-    -U "chpharos/$CHPHAROS_VERSION+wget" \
+    -U "${CHPHAROS_UA}" \
     --header="$(_chpharos_auth_header)"
 }
 
