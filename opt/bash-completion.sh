@@ -14,7 +14,7 @@ _chpharos () {
       return 0
     fi
 
-    COMPREPLY=( $(compgen -W "use install uninstall current list list-remote reset auto" -- ${cur}) )
+    COMPREPLY=( $(compgen -W "use install uninstall current list list-remote reset auto login logout" -- ${cur}) )
   elif [ "$COMP_CWORD" = "2" ]; then
     case "$prev" in
       install)
