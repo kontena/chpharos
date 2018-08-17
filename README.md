@@ -1,5 +1,8 @@
 # chpharos - Kontena Pharos version switcher
 
+[![Build Status](https://travis-ci.org/kontena/chpharos.svg?branch=master)](https://travis-ci.org/kontena/chpharos)
+[![Join the chat at https://slack.kontena.io](https://slack.kontena.io/badge.svg)](https://slack.kontena.io)
+
 Install and use multiple versions of [pharos-cluster](https://github.com/kontena/pharos-cluster) and the compatible tools such as [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) for each.
 
 `chpharos` has been heavily inspired by the Ruby version switcher [`chruby`](https://github.com/postmodern/chruby).
