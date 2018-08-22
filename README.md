@@ -53,6 +53,15 @@ To install the latest version, use `chpharos install latest`
 
 ## Installation
 
+
+### From the command line
+
+To install from the command line, use:
+
+```
+curl -s https://get.pharos.sh | sudo bash
+```
+
 ### Via MacOS homebrew
 
 To install using the [Homebrew](https://brew.sh/) package manager, use:
