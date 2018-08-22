@@ -202,10 +202,36 @@ _chpharos_write_token() {
   [ ! -z "$1" ] && echo "CHPHAROS_TOKEN=\"$1\"" >> "${CHPHAROS_CFG}"
 }
 
+_chpharos_url_encode() {
+  local string="${1}"
+
+  if command -v xxd &> /dev/null; then
+    echo -ne "${string}" | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g'
+  elif command -v hexdump &> /dev/null; then
+    echo -ne "${string}" | hexdump -v -e '/1 "%02x"' | sed 's/\(..\)/%\1/g'
+  else
+    # Fallback, perhaps the shell is BASH4+ compatible and has printf -v
+    local strlen=${#string}
+    local encoded=""
+    local pos c o
+
+    for (( pos=0 ; pos<strlen ; pos++ )); do
+       c=${string:$pos:1}
+       case "$c" in
+          [-_.~a-zA-Z0-9] ) o="${c}" ;;
+          * ) printf -v o '%%%02x' "'$c"
+       esac
+       encoded+="${o}"
+    done
+    echo "${encoded}"
+  fi
+}
+
 _chpharos_login_curl() {
   local username password
   username="$1"
   password="$2"
+
   curl -sSL -XPOST "${CHPHAROS_SVC_URL}/auth" \
     -d "username=${username}&password=${password}&grant_type=password" \
     -H "Content-Type: application/x-www-form-urlencoded" \
@@ -234,7 +260,7 @@ _chpharos_subcommand_login() {
   printf '\n'
 
   local token
-  token=$("_chpharos_login_$CHPHAROS_WEB_CLIENT" "${username}" "${password}")
+  token=$("_chpharos_login_$CHPHAROS_WEB_CLIENT" "$(_chpharos_url_encode "${username}")" "$(_chpharos_url_encode "${password}")")
 
   if [ "${#token}" -eq 64 ]; then
     _chpharos_write_token "${token}"
