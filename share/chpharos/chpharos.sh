@@ -194,33 +194,9 @@
 
 CHPHAROS_VERSION=0.2.0
 
-if [ -z "${CHPHAROS_CFG}" ]; then
-  CHPHAROS_CFG="$HOME/.chpharosrc"
-fi
-
-# Load config
-if [ -f "${CHPHAROS_CFG}" ]; then
-  # shellcheck disable=SC1091,SC1090
-  . "${CHPHAROS_CFG}"
-fi
-
-if [ -z "${CHPHAROS_ROOT}" ]; then
-  CHPHAROS_ROOT="$HOME/.pharos/chpharos"
-fi
-
-if [ -z "${CHPHAROS_SVC_URL}" ]; then
-  CHPHAROS_SVC_URL="https://get.pharos.sh"
-fi
-
-if [ -z "${CHPHAROS_WEB_CLIENT}" ]; then
-  CHPHAROS_WEB_CLIENT="$(basename "$(command -v curl || command -v wget || echo "none")")"
-  [ "${CHPHAROS_WEB_CLIENT}" = "none" ] && _chpharos_error_echo "curl or wget required" && return 1
-fi
-
-CHPHAROS_UA="chpharos/${CHPHAROS_VERSION}+$(_chpharos_os)+${CHPHAROS_WEB_CLIENT}"
-
-PHAROS_VERSIONS=()
-
+_chpharos_error_echo() {
+  (>&2 echo "error: $1")
+}
 _chpharos_write_token() {
   [ -f "${CHPHAROS_CFG}" ]  && mv "${CHPHAROS_CFG}" "${CHPHAROS_CFG}.1" && grep -v CHPHAROS_TOKEN "${CHPHAROS_CFG}.1" > "${CHPHAROS_CFG}" && rm -f "${CHPHAROS_CFG}.1"
   [ ! -z "$1" ] && echo "CHPHAROS_TOKEN=\"$1\"" >> "${CHPHAROS_CFG}"
@@ -356,10 +332,6 @@ _chpharos_auto() {
       _chpharos_auto_version_origin="${old_origin}" # restore after chpharos use resets it
     fi
   fi
-}
-
-_chpharos_error_echo() {
-  (>&2 echo "error: $1")
 }
 
 _chpharos_os() {
@@ -815,6 +787,33 @@ chpharos() {
     fi
   fi
 }
+
+if [ -z "${CHPHAROS_CFG}" ]; then
+  CHPHAROS_CFG="$HOME/.chpharosrc"
+fi
+
+# Load config
+if [ -f "${CHPHAROS_CFG}" ]; then
+  # shellcheck disable=SC1091,SC1090
+  . "${CHPHAROS_CFG}"
+fi
+
+if [ -z "${CHPHAROS_ROOT}" ]; then
+  CHPHAROS_ROOT="$HOME/.pharos/chpharos"
+fi
+
+if [ -z "${CHPHAROS_SVC_URL}" ]; then
+  CHPHAROS_SVC_URL="https://get.pharos.sh"
+fi
+
+if [ -z "${CHPHAROS_WEB_CLIENT}" ]; then
+  CHPHAROS_WEB_CLIENT="$(basename "$(command -v curl || command -v wget || echo "none")")"
+  [ "${CHPHAROS_WEB_CLIENT}" = "none" ] && _chpharos_error_echo "curl or wget required" && return 1
+fi
+
+CHPHAROS_UA="chpharos/${CHPHAROS_VERSION}+$(_chpharos_os)+${CHPHAROS_WEB_CLIENT}"
+
+PHAROS_VERSIONS=()
 
 chpharos reset
 _chpharos_scan
