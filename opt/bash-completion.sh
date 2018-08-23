@@ -19,12 +19,13 @@ _chpharos () {
     case "$prev" in
       install)
         if [[ ${cur} == -* ]] ; then
-          COMPREPLY=( $(compgen -W "--force" -- ${cur}) )
+          COMPREPLY=( $(compgen -W "--force --pre --help --use" -- ${cur}) )
           return 0
         fi
-        local versions=$(_chpharos_remote_files | cut -d"|" -f1 | uniq)
+        local versions=$(_chpharos_subcommand_list_remote | cut -d" " -f1)
         if [ ! -z "$versions" ]; then
           COMPREPLY=( $(compgen -W "$versions" -- ${cur}) )
+          COMPREPLY+=("latest")
         fi
         ;;
       ls-remote|list-remote)
