@@ -22,11 +22,11 @@ _chpharos () {
           COMPREPLY=( $(compgen -W "--force --pre --help --use" -- ${cur}) )
           return 0
         fi
-        local versions=$(_chpharos_subcommand_list_remote | cut -d" " -f1)
+        local versions=$(_chpharos_subcommand_list_remote 2>/dev/null | cut -d" " -f1)
         if [ ! -z "$versions" ]; then
           COMPREPLY=( $(compgen -W "$versions" -- ${cur}) )
-          COMPREPLY+=("latest")
         fi
+        COMPREPLY+=("latest")
         ;;
       ls-remote|list-remote)
         if [[ ${cur} == -* ]] ; then
