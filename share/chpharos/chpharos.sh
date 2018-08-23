@@ -192,7 +192,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-CHPHAROS_VERSION=0.2.2
+CHPHAROS_VERSION=0.2.3
 
 _chpharos_error_echo() {
   (>&2 echo "error: $1")
