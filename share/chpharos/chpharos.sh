@@ -595,25 +595,36 @@ _chpharos_subcommand_install() {
   _chpharos_validate_external_tools || return 1
   [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
-  local force
+  local force pre version use
+  for opt in "$@"; do
+    case "${opt}" in
+      --force) force="true" ;;
+      --pre) pre="--pre" ;;
+      --use) use="true" ;;
+      --help)
+        cat << EOF
+usage: chpharos install [--force] [--pre] [--use] <version|latest>
 
-  if [ "$1" = "--force" ]; then
-    force="true"
-    shift
-  fi
+Installs the specified version of pharos-cluster bundle or the latest version when using "latest".
 
-  if [ "$2" = "--force" ]; then
-    force="true"
-  fi
+options:
+  --force  Force reinstall if version is already installed
+  --pre    Install the latest pre-release version (use together with latest)
+  --use    Switch to installed version when finished
+  --help   This help
+EOF
+        return 0
+        ;;
+      *) version="${opt}"
+    esac
+  done
 
-  local version="$1"
-
-  if [ "$1" = "" ]; then
-    _chpharos_error_echo "missing version: use chpharos install <version>"; return 1
+  if [ -z "${version}" ]; then
+    _chpharos_error_echo "missing version: use chpharos install <version> or chpharos install latest"; return 1
   fi
 
   if [ "${version}" = "latest" ]; then
-    version=$(_chpharos_remote_files | head -1)
+    version=$(_chpharos_remote_versions "${pre}" | head -1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
   fi
 
   if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
@@ -657,8 +668,13 @@ _chpharos_subcommand_install() {
     [ -d "${destination_dir}" ] && rm -rf "${destination_dir}"
     _chpharos_error_echo "installation failed, use: chpharos list-remote to get a list of available versions."; return 1
   else
-    echo "Installed version ${version}. To set as current, use: chpharos use ${version}"
     _chpharos_scan &> /dev/null
+    if [ -z "${use}" ]; then
+      echo "Installed version ${version}. To set as current, use: chpharos use ${version}"
+    else
+      echo "Installed and switched to version ${version}."
+      _chpharos_subcommand_use "${version}" &> /dev/null
+    fi
   fi
 }
 
