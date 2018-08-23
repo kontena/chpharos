@@ -192,6 +192,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+if command -v compgen &> /dev/null; then
+  for chpharos_function in $(compgen -A function | grep _chpharos_); do
+    unset -f "${chpharos_function}"
+  done
+  unset chpharos_function
+fi
+
 CHPHAROS_VERSION=0.2.3
 
 _chpharos_error_echo() {
