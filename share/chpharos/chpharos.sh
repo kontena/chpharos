@@ -199,7 +199,7 @@ if command -v compgen &> /dev/null; then
   unset chpharos_function
 fi
 
-CHPHAROS_VERSION=0.2.3
+CHPHAROS_VERSION=0.2.4
 
 _chpharos_error_echo() {
   (>&2 echo "error: $1")
