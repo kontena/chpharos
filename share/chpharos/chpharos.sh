@@ -828,7 +828,7 @@ chpharos() {
     subcommand="_chpharos_subcommand_$1"
     subcommand="${subcommand//_--/_longdash_}"
     subcommand="${subcommand//-/_}"
-    if type "${subcommand}" | grep -q 'function'; then
+    if declare -Ff "${subcommand}" &> /dev/null; then
       shift
       "${subcommand}" "$@"
     else
