@@ -112,8 +112,8 @@ You can use `chpharos use --local 1.1.1` to create a `.pharos-version` file in t
 
 ### Tab completions
 
-1. Download the [bash-complete.sh](https://raw.githubusercontent.com/kontena/chpharos/master/opt/bash-complete.sh)
-2. Place the file into the completion configuration directory (on your machine or add a line to your shell's start-up configuration file (`.bash_profile`, `.zshrc`, ..) to load it: `source <path-to-bash-complete.sh>`
+1. Download the [bash-completion.sh](https://raw.githubusercontent.com/kontena/chpharos/master/opt/bash-completion.sh)
+2. Place the file into the completion configuration directory (on your machine or add a line to your shell's start-up configuration file (`.bash_profile`, `.zshrc`, ..) to load it: `source <path-to-bash-completion.sh>`
 
 ## About Kontena Pharos
 
