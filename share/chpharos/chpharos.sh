@@ -391,7 +391,7 @@ _chpharos_version_is_installed() {
   for item in "${PHAROS_VERSIONS[@]}"; do
     if [ "${version}" = "$item" ]; then
       local version_root="${CHPHAROS_ROOT}/versions/${version}"
-      [ -d "${version_root}" ] && [ ! -z "$(ls -A "${version_root}")" ] && return 0
+      [ -d "${version_root}" ] && [ ! -z "$(/usr/bin/env ls -A "${version_root}")" ] && return 0
     fi
   done
   return 1
