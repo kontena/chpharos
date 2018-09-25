@@ -139,6 +139,7 @@ It's also possible to just run the installation:
 chpharos-exec -i 1.3.2
 ```
 
+## About Kontena Pharos
 
 [Kontena Pharos](https://pharos.sh) is a simple, solid and certified [Kubernetes](https://kubernetes.io/) distribution that just works. It is composed of the latest upstream Kubernetes with all the essential components delivering a robust foundation that works at any scale. It is open source under Apache 2 license and free for any purpose: personal or commercial.
 
@@ -154,4 +155,4 @@ Slack: [Join the Kontena Community Slack channel](https://slack.kontena.io/).
 
 ## License
 
-Kontena chpharos is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for full license text.
+Kontena chpharos is licensed under the Apache 2 License, Version 2.0. See [LICENSE](LICENSE) for full license text.
