@@ -646,6 +646,9 @@ EOF
   # shellcheck disable=SC2207
   url_datas=($(_chpharos_remote_version_url_data "${version}"))
 
+  local license_files
+  license_files=()
+
   for url_data in "${url_datas[@]}"; do
     IFS="|" read -r dl_filename dl_size dl_sha256 dl_url <<<"${url_data}"
     echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
@@ -659,8 +662,12 @@ EOF
     echo -n "Verifying download SHA256 checksum.. "
 
     if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
-    echo "OK"
-      chmod ug+x "${destination}"
+      echo "OK"
+      if [[ $dl_filename = *license* ]]; then
+        license_files+=("${destination}")
+      else
+        chmod ug+x "${destination}"
+      fi
     else
       rm -rf "${destination_dir}"
       _chpharos_error_echo "checksum verification failed"; break
@@ -681,6 +688,13 @@ EOF
     else
       echo "Installed and switched to version ${version}."
       _chpharos_subcommand_use "${version}" &> /dev/null
+    fi
+    local license_file
+    if [ ! -z "${license_files[*]}" ]; then
+      echo "The following license files were downloaded, by continuing to use the tools, you agree to the terms:"
+      for license_file in "${license_files[@]}"; do
+        echo "  ${license_file}"
+      done
     fi
   fi
 }
