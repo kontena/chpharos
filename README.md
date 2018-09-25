@@ -115,7 +115,30 @@ You can use `chpharos use --local 1.1.1` to create a `.pharos-version` file in t
 1. Download the [bash-completion.sh](https://raw.githubusercontent.com/kontena/chpharos/master/opt/bash-completion.sh)
 2. Place the file into the completion configuration directory on your machine or add a line to your shell's start-up configuration file (`.bash_profile`, `.zshrc`, ..) to load it: `source <path-to-bash-completion.sh>`
 
-## About Kontena Pharos
+### Usage in scripts or CI/CD pipelines
+
+You can use the `chpharos-exec` command to execute specified versions of pharos without sourcing the chpharos first:
+
+```
+$ chpharos-exec 1.3.2 pharos --version
+pharos-cluster 1.3.2
+$ chpharos-exec 1.3.2 kubectl version --short --client
+Client Version: v1.9.3
+```
+
+You can make `chpharos-exec` install the requested version automatically if it was not already installed. This is useful in CI/CD pipeline deployment scripts.
+Add your Kontena Account token to `CHPHAROS_TOKEN` secret/environment variable and use `chpharos-exec -i` in your script:
+
+```
+curl -s https://get.pharos.sh | bash && chpharos-exec -i 1.3.2 pharos up
+```
+
+It's also possible to just run the installation:
+
+```
+chpharos-exec -i 1.3.2
+```
+
 
 [Kontena Pharos](https://pharos.sh) is a simple, solid and certified [Kubernetes](https://kubernetes.io/) distribution that just works. It is composed of the latest upstream Kubernetes with all the essential components delivering a robust foundation that works at any scale. It is open source under Apache 2 license and free for any purpose: personal or commercial.
 
