@@ -4,28 +4,58 @@ chpharos_sh="${0%/*}/../share/chpharos/chpharos.sh"
 
 source "$chpharos_sh"
 
+install=""
+
 case "$1" in
-	-h|--help)
-		echo "usage: chpharos-exec PHAROS_VERSION -- COMMAND [ARGS...]"
-		exit
-		;;
-	-V|--version)
-		echo "chpharos-exec $CHPHAROS_VERSION"
-		exit
-		;;
+  -h|--help)
+    echo "usage: chpharos-exec [OPTIONS] PHAROS_VERSION -- COMMAND [ARGS...]"
+    echo ""
+    echo "options:"
+    echo " -i | --install   install requested pharos version before executing the command if it isn't installed yet"
+    echo " -V | --version   display chpharos-exec/chphaors version"
+    echo " -h | --help      display help"
+    echo ""
+    echo "When using the automatic installation feature, make sure you have performed a chpharos login first"
+    echo "or have your Kontena Account token in the CHPHAROS_TOKEN environment variable."
+    exit
+    ;;
+  -i)
+    install="true"
+    shift
+    ;;
+  -V|--version)
+    echo "chpharos-exec $CHPHAROS_VERSION"
+    exit
+    ;;
 esac
 
 if (( $# == 0 )); then
-	echo "chpharos-exec: PHAROS_VERSION and COMMAND required" >&2
-	exit 1
+  echo "chpharos-exec: PHAROS_VERSION and COMMAND required" >&2
+  exit 1
 fi
 
 chpharos_version="$1"
 shift
 
+if ! _chpharos_version_is_installed "${chpharos_version}"; then
+  if [ ! -z "${install}" ]; then
+    if ! _chpharos_subcommand_install "${chpharos_version}"; then
+      echo "chpharos-exec: installation of version ${chpharos_version} failed" >&2
+      exit 1
+    fi
+  else
+    echo "chpharos-exec: version ${chpharos_version} is not installed. use chpharos-exec -i PHAROS_VERSION -- COMMAND [ARGS...] to automatically install before running COMMAND" >&2
+    exit 1
+  fi
+fi
+
 if (( $# == 0)); then
-  echo "chpharos-exec: COMMAND required" >&2
-  exit 1
+  if [ -z "${install}" ]; then
+    echo "chpharos-exec: COMMAND required" >&2
+    exit 1
+  else
+    exit
+  fi
 fi
 
 shell_opts=("-l")
