@@ -678,7 +678,7 @@ EOF
     fi
   done
 
-  if [ ! -d "${destination_dir}" ] || [ -z "$(ls -A "${destination_dir}")" ]; then
+  if [ ! -d "${destination_dir}" ] || [ -z "$(env ls -A "${destination_dir}")" ]; then
     [ -d "${destination_dir}" ] && rm -rf "${destination_dir}"
     _chpharos_error_echo "installation failed, use: chpharos list-remote to get a list of available versions."; return 1
   else
