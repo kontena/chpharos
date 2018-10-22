@@ -472,7 +472,7 @@ EOF
 
 _chpharos_validate_external_tools() {
   (command -v curl > /dev/null || command -v wget > /dev/null) || (_chpharos_error_echo "curl or wget not installed"; return 1)
-  command -v shasum > /dev/null || (_chpharos_error_echo "shasum not installed"; return 1)
+  (command -v shasum > /dev/null || command -v sha256sum > /dev/null) || (_chpharos_error_echo "shasum not installed"; return 1)
 }
 
 _chpharos_subcommand_longdash_help() {
@@ -552,7 +552,11 @@ _chpharos_get_file_curl() {
 _chpharos_sha_verify() {
   local file_path="$1"
   local checksum="$2"
-  echo "${checksum}  ${file_path}" | shasum -a 256 -c - &> /dev/null
+  if command -v shasum; then
+    echo "${checksum}  ${file_path}" | shasum -a 256 -c - &> /dev/null
+  elif command -v shasum256; then
+    echo "${checksum}  ${file_path}" | sha256sum -c - &> /dev/null
+  fi
 }
 
 _chpharos_remote_versions_curl() {
