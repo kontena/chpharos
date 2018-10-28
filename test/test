@@ -1,5 +1,31 @@
 #!/bin/sh
 
+testChpharosLogin() {
+
+	chpharos login --user USER --pass PASS &> /dev/null
+	ret=$?
+	assertFalse "Login with Invalid username or password should return an error" $ret
+
+	chpharos login -u USERNAME -p PASSWORD &> /dev/null
+	ret=$?
+	assertFalse "Login with Invalid username or password should return an error" $ret
+
+	yes | chpharos login &> /dev/null
+	ret=$?
+	assertFalse "should prompt for username & password, then return an error for both being 'yes'" $ret
+
+	if [ -z "$CHPHAROS_TOKEN" ]; then
+	  printf "Must login with one of three methods:"
+		printf "\n\t"'chpharos login --user $USER --pass $PASS'
+		printf "\n\t"'chpharos login -u $USER -p $PASS'
+		printf "\n\tchpharos login\n"
+	fi
+	if [ -z "$CHPHAROS_TOKEN" ]; then
+	  chpharos login --user $CHPHAROS_USER --pass $CHPHAROS_PASS
+	fi
+}
+
+
 testChpharosUse() {
   chpharos use 1.0.0 > /dev/null
   version=$(pharos-cluster version | grep "pharos-cluster version")

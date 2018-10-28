@@ -257,14 +257,34 @@ _chpharos_login_wget() {
 }
 
 _chpharos_subcommand_login() {
-  echo "Log in using your Kontena Account credentials"
-  echo "Visit https://account.kontena.io/ to register a new account."
-  printf '\n'
-  printf "Username: "
-  read -r username
-  printf "Password: "
-  read -r -s password
-  printf '\n'
+	# ensure we have fresh values beore login
+  unset CHPHAROS_TOKEN
+	unset username
+	unset password
+
+  while [ ! -z "$1" ]; do
+		case $1 in
+			-u | --user )       shift
+				                  username=$1
+													;;
+			-p | --pass )       shift
+				                  password=$1
+				                  ;;
+			* )                 interactive=1
+		esac
+		shift
+  done
+
+	if [ -z "${username}" ] || [ -z "${password}" ]; then
+		echo "Log in using your Kontena Account credentials"
+		echo "Visit https://account.kontena.io/ to register a new account."
+		printf '\n'
+		printf "Username: "
+		read -r username
+		printf "Password: "
+		read -r -s password
+		printf '\n'
+	fi
 
   local token
   token=$("_chpharos_login_$CHPHAROS_WEB_CLIENT" "$(_chpharos_url_encode "${username}")" "$(_chpharos_url_encode "${password}")")
@@ -298,6 +318,8 @@ _chpharos_logout_wget() {
 _chpharos_subcommand_logout() {
   "_chpharos_logout_${CHPHAROS_WEB_CLIENT}"
   unset CHPHAROS_TOKEN
+	unset username
+	unset password
   _chpharos_write_token ""
 }
 
