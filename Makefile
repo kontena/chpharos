@@ -13,7 +13,8 @@ SHARE_DIR=$(PREFIX)/share/chpharos
 all:
 
 clean:
-	rm -rf test/binaries
+	rm -rf test/test-binaries
+	rm -rf test/home/.chpharosrc*
 
 test/test-binaries/versions:
 	./test/setup

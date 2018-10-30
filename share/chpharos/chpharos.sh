@@ -257,14 +257,41 @@ _chpharos_login_wget() {
 }
 
 _chpharos_subcommand_login() {
-  echo "Log in using your Kontena Account credentials"
-  echo "Visit https://account.kontena.io/ to register a new account."
-  printf '\n'
-  printf "Username: "
-  read -r username
-  printf "Password: "
-  read -r -s password
-  printf '\n'
+  local username
+  local password
+
+  while [ ! -z "$1" ]; do
+    case $1 in
+      -u | --username )   shift
+                          username="$1"
+                          ;;
+      -p | --password )   shift
+                          password="$1"
+                          ;;
+      --help)             cat <<EOF
+chpharos login [--username <username>] [--password <password>]
+
+  Login to your Kontena Account
+
+  --username  Kontena Account username
+  --password  Kontena Account password
+EOF
+                          return 0
+                          ;;
+    esac
+    shift
+  done
+
+  if [ -z "${username}" ] || [ -z "${password}" ]; then
+    echo "Log in using your Kontena Account credentials"
+    echo "Visit https://account.kontena.io/ to register a new account."
+    printf '\n'
+    printf "Username: "
+    read -r username
+    printf "Password: "
+    read -r -s password
+    printf '\n'
+  fi
 
   local token
   token=$("_chpharos_login_$CHPHAROS_WEB_CLIENT" "$(_chpharos_url_encode "${username}")" "$(_chpharos_url_encode "${password}")")
@@ -278,6 +305,7 @@ _chpharos_subcommand_login() {
     _chpharos_error_echo "Login failed: ${token}" && return 1
   fi
 }
+
 _chpharos_logout_curl() {
   [ -z "${CHPHAROS_TOKEN}" ] && return
   curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \

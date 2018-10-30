@@ -1,0 +1,4 @@
+*.bash_history
+*.swp
+test/home/.chpharos*
+test/home/.zcomp*
