@@ -22,7 +22,7 @@ Logging in is required for downloading binaries and listing versions.
 Methods supported for login:
 
 * interactive: `chpharos login`
-* in-line arg: `chpharos login --user $CHPHAROS_USER --pass $CHPHAROS_PASS`
+* in-line arg: `chpharos login --username $CHPHAROS_USER --password $CHPHAROS_PASS`
 
 Use `chpharos logout` to log out.
 
