@@ -19,10 +19,13 @@ Install and use multiple versions of [pharos-cluster](https://github.com/kontena
 
 Logging in is required for downloading binaries and listing versions.
 
-Methods supported for login:
+You can use the interactive login prompt by using:
 
-* interactive: `chpharos login`
-* in-line arg: `chpharos login --username $CHPHAROS_USER --password $CHPHAROS_PASS`
+`chpharos login` 
+
+Or provide the username and password as command-line arguments by using:
+
+ `chpharos login --username USERNAME --password PASSWORD`.
 
 Use `chpharos logout` to log out.
 
