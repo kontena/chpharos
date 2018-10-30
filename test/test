@@ -2,7 +2,7 @@
 
 testChpharosLogin() {
 
-  chpharos login --user USER --pass PASS &> /dev/null
+  chpharos login --username USER --password PASS &> /dev/null
   ret=$?
   assertFalse "Login with Invalid username or password should return an error" $ret
 
@@ -16,7 +16,7 @@ testChpharosLogin() {
 
   # ensure other tests that require login pass by loging in
   if [ -z "$CHPHAROS_TOKEN" ] && [ ! -z "$CHPHAROS_USER" ] && [ ! -z "$CHPHAROS_PASS" ]; then
-    chpharos login --user $CHPHAROS_USER --pass $CHPHAROS_PASS
+    chpharos login --username $CHPHAROS_USER --password $CHPHAROS_PASS
   fi
 }
 
