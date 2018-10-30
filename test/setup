@@ -7,7 +7,7 @@ export CHPHAROS_ROOT="${test_root}/test-binaries"
 mkdir -p "${CHPHAROS_ROOT}"
 
 if [ -z "$CHPHAROS_TOKEN" ]; then
-  printf "Warn: Some tests may fail. If CHPHAROS_TOKEN is not set and valid."
+  printf "Warn: Some tests may fail. If CHPHAROS_TOKEN or CHPHAROS_USER and CHPHAROS_PASS are not set and valid."
 fi
 
 [ -f "${CHPHAROS_ROOT}/versions/1.0.0/pharos-cluster" ] && \
