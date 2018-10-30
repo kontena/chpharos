@@ -45,6 +45,11 @@ _chpharos () {
         fi
         COMPREPLY=( "${PHAROS_VERSIONS[@]}" )
         ;;
+      login)
+        if [[ ${cur} == -* ]] ; then
+          COMPREPLY=( $(compgen -W "--username --password --help" -- ${cur}) )
+        fi
+        ;;
     esac
   fi
 }
