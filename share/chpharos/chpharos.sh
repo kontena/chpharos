@@ -262,11 +262,21 @@ _chpharos_subcommand_login() {
 
   while [ ! -z "$1" ]; do
     case $1 in
-      -u | --user )       shift
+      -u | --username )   shift
                           username="$1"
                           ;;
-      -p | --pass )       shift
+      -p | --password )   shift
                           password="$1"
+                          ;;
+      --help)             cat <<EOF
+chpharos login [--username <username>] [--password <password>]
+
+  Login to your Kontena Account
+
+  --username  Kontena Account username
+  --password  Kontena Account password
+EOF
+                          return 0
                           ;;
     esac
     shift
@@ -295,6 +305,7 @@ _chpharos_subcommand_login() {
     _chpharos_error_echo "Login failed: ${token}" && return 1
   fi
 }
+
 _chpharos_logout_curl() {
   [ -z "${CHPHAROS_TOKEN}" ] && return
   curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \
