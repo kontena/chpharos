@@ -477,6 +477,8 @@ EOF
   esac
   local version="$1"
 
+  _chpharos_scan &> /dev/null
+
   if _chpharos_version_is_installed "${version}"; then
     _chpharos_reset
 
