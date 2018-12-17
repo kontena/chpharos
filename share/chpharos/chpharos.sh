@@ -239,7 +239,12 @@ _chpharos_login_curl() {
   username="$1"
   password="$2"
 
-  curl -sSL -XPOST "${CHPHAROS_SVC_URL}/auth" \
+  local debug_param=""
+  if [ -n "$CHPHAROS_DEBUG_CURL" ]; then
+    debug_param="v"
+  fi
+
+  curl -sSL"${debug_param}" -XPOST "${CHPHAROS_SVC_URL}/auth" \
     -d "username=${username}&password=${password}&grant_type=password" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -A "${CHPHAROS_UA}"
@@ -308,7 +313,11 @@ EOF
 
 _chpharos_logout_curl() {
   [ -z "${CHPHAROS_TOKEN}" ] && return
-  curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \
+  local debug_param=""
+  if [ -n "$CHPHAROS_DEBUG_CURL" ]; then
+    debug_param="v"
+  fi
+  curl -sSL"${debug_param}" -XDELETE "${CHPHAROS_SVC_URL}/auth" \
     -A "${CHPHAROS_UA}" \
     -H "$(_chpharos_auth_header)" &> /dev/null
 }
@@ -566,17 +575,23 @@ _chpharos_get_file_wget() {
 _chpharos_get_file_curl() {
   local url="$1"
   local destination="$2"
+  local debug_param=""
+  if [ -n "$CHPHAROS_DEBUG_CURL" ]; then
+    debug_param="v"
+  fi
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
+    [ -n "${debug_param}" ] && echo "Obtaining a redirect from ${url}"
     final_url="$(curl -sSL -A "${CHPHAROS_UA}" -H "$(_chpharos_auth_header)" "${url}")"
+    [ -n "${debug_param}" ] && echo "Redirect is to ${final_url}"
   else
     final_url="${url}"
   fi
 
   [ -z "${final_url}" ] && return 1
 
-  curl "-#" -SL "${final_url}" --output "${destination}"
+  curl "-#" -SL"${debug_param}" "${final_url}" --output "${destination}"
 }
 
 _chpharos_sha_verify() {
@@ -590,7 +605,12 @@ _chpharos_sha_verify() {
 }
 
 _chpharos_remote_versions_curl() {
-  curl -sSL "${CHPHAROS_SVC_URL}/versions$1" \
+  local debug_param=""
+  if [ -n "$CHPHAROS_DEBUG_CURL" ]; then
+    debug_param="v"
+  fi
+
+  curl -sSL"${debug_param}" "${CHPHAROS_SVC_URL}/versions$1" \
     -A "${CHPHAROS_UA}" \
     -H "$(_chpharos_auth_header)"
 }
@@ -636,7 +656,7 @@ _chpharos_subcommand_install() {
   _chpharos_validate_external_tools || return 1
   [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
-  local force pre version use
+  local force pre version use debug
   for opt in "$@"; do
     case "${opt}" in
       --force) force="true" ;;
@@ -644,7 +664,7 @@ _chpharos_subcommand_install() {
       --use) use="true" ;;
       --help)
         cat << EOF
-usage: chpharos install [--force] [--pre] [--use] <version|latest>
+usage: chpharos install [--force] [--pre] [--use] [--debug] <version|latest>
 
 Installs the specified version of pharos-cluster bundle or the latest version when using "latest".
 
