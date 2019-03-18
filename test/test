@@ -137,6 +137,18 @@ testChpharosInstall() {
   chpharos use 1.0.1 &> /dev/null
   ret=$?
   assertFalse "uninstall should make a version unknown" $ret
+
+  for oss_version in $(chpharos list | grep "oss" | cut -d" " -f1); do
+    chpharos uninstall "$oss_version"
+  done
+
+  chpharos install latest+oss &> /dev/null
+  ret=$?
+  assertTrue "installing latest oss version should not fail" $ret
+
+  chpharos list | grep -q "+oss"
+  ret=$?
+  assertTrue "after installing latest oss version there should be atleast one oss version in the list" $ret
 }
 
 testChpharosReset() {
