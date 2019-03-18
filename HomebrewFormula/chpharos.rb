@@ -1,8 +1,8 @@
 class Chpharos < Formula
   desc "Kontena Pharos tool chain version installer and switcher"
   homepage "https://github.com/kontena/chpharos#readme"
-  url "https://github.com/kontena/chpharos/archive/v0.5.0.tar.gz"
-  sha256 "072e449004bab65234c7fa849a67522458864b2b674ed9c07d15e5a2d6f5e01e"
+  url "https://github.com/kontena/chpharos/archive/v0.5.1.tar.gz"
+  sha256 "ef7843958d0f0f466cb1aea67e6c3d344fe720f77b3630c4166924a3f442c33c"
   head "https://github.com/kontena/chpharos.git"
 
   def install
