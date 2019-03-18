@@ -27,10 +27,11 @@ _chpharos () {
           COMPREPLY=( $(compgen -W "$versions" -- ${cur}) )
         fi
         COMPREPLY+=("latest")
+        COMPREPLY+=("latest+oss")
         ;;
       ls-remote|list-remote)
         if [[ ${cur} == -* ]] ; then
-          COMPREPLY=( $(compgen -W "--pre --help" -- ${cur}) )
+          COMPREPLY=( $(compgen -W "--pre --oss --help" -- ${cur}) )
         fi
         ;;
       current)
