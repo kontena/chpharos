@@ -662,6 +662,7 @@ _chpharos_subcommand_install() {
       --force) force="true" ;;
       --pre) pre="--pre" ;;
       --use) use="true" ;;
+      --debug) CHPHAROS_DEBUG_CURL="true" ;;
       --help)
         cat << EOF
 usage: chpharos install [--force] [--pre] [--use] [--debug] <version|latest>
@@ -672,6 +673,7 @@ options:
   --force  Force reinstall if version is already installed
   --pre    Install the latest pre-release version (use together with latest)
   --use    Switch to installed version when finished
+  --debug  Show debug output
   --help   This help
 EOF
         return 0
