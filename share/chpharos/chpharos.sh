@@ -510,11 +510,11 @@ _chpharos_subcommand_longdash_help() {
 Usage: chpharos <sub-command> <sub-command-options>
 
 chpharos use [--local] <version>            Set the current Kontena Pharos version
-chpharos install [--force] <version|latest> Install Kontena Pharos version
+chpharos install [--force] <version>        Install Kontena Pharos version. Use latest or latest+oss to install the latest version.
 chpharos uninstall <version>                Uninstall Kontena Pharos version
 chpharos current [--all]                    Show the current Kontena Pharos version
 chpharos list                               List installed Kontena Pharos versions
-chpharos list-remote [--pre]                List remote Kontena Pharos versions available for install
+chpharos list-remote [--pre] [--oss]        List remote Kontena Pharos versions available for install
 
 chpharos reset                              Remove chpharos path modifications and disable automatic switching
 chpharos auto                               Load automatic version switcher
@@ -604,13 +604,20 @@ _chpharos_remote_versions_wget() {
 }
 
 _chpharos_remote_versions() {
-  local pre
-  if [ "$1" = "--pre" ]; then
-    pre="?pre=true"
+  local pre oss
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --pre) pre="?pre=true" ;;
+      --oss) oss="true" ;;
+    esac
+    shift
+  done
+
+  if [ -z "$oss" ]; then
+    "_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" "${pre}" || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
   else
-    pre=""
+    ("_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" "${pre}" | grep "+oss") || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
   fi
-  "_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" "${pre}" || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
 }
 
 _chpharos_remote_version_url_data_curl() {
@@ -644,9 +651,9 @@ _chpharos_subcommand_install() {
       --use) use="true" ;;
       --help)
         cat << EOF
-usage: chpharos install [--force] [--pre] [--use] <version|latest>
+usage: chpharos install [--force] [--pre] [--use] <version|latest|latest+oss>
 
-Installs the specified version of pharos-cluster bundle or the latest version when using "latest".
+Installs the specified version of pharos-cluster bundle or the latest version when using "latest" or the latest OSS-version when using latest+oss.
 
 options:
   --force  Force reinstall if version is already installed
@@ -666,6 +673,10 @@ EOF
 
   if [ "${version}" = "latest" ]; then
     version=$(_chpharos_remote_versions "${pre}" | head -1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
+  fi
+
+  if [ "${version}" = "latest+oss" ]; then
+    version=$(_chpharos_remote_versions "${pre}" --oss | head -1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
   fi
 
   if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
@@ -811,7 +822,7 @@ _chpharos_subcommand_list_remote() {
   _chpharos_validate_external_tools || return 1
   [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
-  _chpharos_remote_versions "$1" | while IFS="|" read -r version; do
+  _chpharos_remote_versions "$@" | while IFS="|" read -r version; do
     if _chpharos_version_is_installed "${version}"; then
       echo "${version} (installed)"
     else
