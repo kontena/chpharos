@@ -204,10 +204,6 @@ CHPHAROS_VERSION=0.5.1
 _chpharos_error_echo() {
   (>&2 echo "error: $1")
 }
-_chpharos_write_token() {
-  [ -f "${CHPHAROS_CFG}" ]  && mv "${CHPHAROS_CFG}" "${CHPHAROS_CFG}.1" && grep -v CHPHAROS_TOKEN "${CHPHAROS_CFG}.1" > "${CHPHAROS_CFG}" && rm -f "${CHPHAROS_CFG}.1"
-  [ ! -z "$1" ] && echo "CHPHAROS_TOKEN=\"$1\"" >> "${CHPHAROS_CFG}"
-}
 
 _chpharos_url_encode() {
   local string="${1}"
@@ -234,104 +230,11 @@ _chpharos_url_encode() {
   fi
 }
 
-_chpharos_login_curl() {
-  local username password
-  username="$1"
-  password="$2"
-
-  curl -sSL -XPOST "${CHPHAROS_SVC_URL}/auth" \
-    -d "username=${username}&password=${password}&grant_type=password" \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -A "${CHPHAROS_UA}"
-}
-
-_chpharos_login_wget() {
-  local username password
-  username="$1"
-  password="$2"
-  wget "${CHPHAROS_SVC_URL}/auth" \
-    -O - \
-    --quiet \
-    --post-data="username=${username}&password=${password}&grant_type=password" \
-    -U "${CHPHAROS_UA}"
-}
-
-_chpharos_subcommand_login() {
-  local username
-  local password
-
-  while [ ! -z "$1" ]; do
-    case $1 in
-      -u | --username )   shift
-                          username="$1"
-                          ;;
-      -p | --password )   shift
-                          password="$1"
-                          ;;
-      --help)             cat <<EOF
-chpharos login [--username <username>] [--password <password>]
-
-  Login to your Kontena Account
-
-  --username  Kontena Account username
-  --password  Kontena Account password
-EOF
-                          return 0
-                          ;;
-    esac
-    shift
-  done
-
-  if [ -z "${username}" ] || [ -z "${password}" ]; then
-    echo "Log in using your Kontena Account credentials"
-    echo "Visit https://account.kontena.io/ to register a new account."
-    printf '\n'
-    printf "Username: "
-    read -r username
-    printf "Password: "
-    read -r -s password
-    printf '\n'
-  fi
-
-  local token
-  token=$("_chpharos_login_$CHPHAROS_WEB_CLIENT" "$(_chpharos_url_encode "${username}")" "$(_chpharos_url_encode "${password}")")
-
-  if [ "${#token}" -eq 64 ]; then
-    _chpharos_write_token "${token}"
-    echo "Logged in"
-    CHPHAROS_TOKEN="${token}"
-  else
-    unset CHPHAROS_TOKEN
-    _chpharos_error_echo "Login failed: ${token}" && return 1
-  fi
-}
-
-_chpharos_logout_curl() {
-  [ -z "${CHPHAROS_TOKEN}" ] && return
-  curl -sSL -XDELETE "${CHPHAROS_SVC_URL}/auth" \
-    -A "${CHPHAROS_UA}" \
-    -H "$(_chpharos_auth_header)" &> /dev/null
-}
-
-_chpharos_logout_wget() {
-  wget --help | grep -- "--method" &> /dev/null || (_chpharos_error_echo "Your version of wget does not have the --method option to send DELETE requests, the token will remain valid."; return 1)
-  wget "${CHPHAROS_SVC_URL}/auth" \
-    -O - \
-    --quiet \
-    --method DELETE \
-    -U "${CHPHAROS_UA}" \
-    --header="$(_chpharos_auth_header)" &> /dev/null
-}
-
-_chpharos_subcommand_logout() {
-  "_chpharos_logout_${CHPHAROS_WEB_CLIENT}"
-  unset CHPHAROS_TOKEN
-  _chpharos_write_token ""
-}
 
 _chpharos_scan() {
   local unsorted_versions=""
   local pharos_version
+  local newline=$'\n'
   PHAROS_VERSIONS=()
 
   # Bail out if dir doesn't exist
@@ -340,21 +243,10 @@ _chpharos_scan() {
   # Build a list of versions where non prerelease version numbers get suffixed with _ for sorting reasons
   for pharos_version in "${CHPHAROS_ROOT}"/versions/*.*.*; do
     if [ -d "${pharos_version}" ]; then
-      unsorted_versions="${unsorted_versions}$IFS${pharos_version/$CHPHAROS_ROOT\/versions\//}"
-      if [ ! -z "${pharos_version##*-*}" ]; then
-        unsorted_versions="${unsorted_versions}_"
-      fi
+      unsorted_versions="${unsorted_versions}${newline}$IFS${pharos_version/$CHPHAROS_ROOT\/versions\//}"
     fi
   done
-
-  # Sort and remove the trailing _
-  for pharos_version in $(echo "${unsorted_versions}" | sort -r); do
-    if [ -z "${pharos_version##*_}" ]; then
-      PHAROS_VERSIONS+=("${pharos_version%_}")
-    else
-      PHAROS_VERSIONS+=("${pharos_version}")
-    fi
-  done
+  PHAROS_VERSIONS=($(echo "${unsorted_versions}" | _sort_versions))
 }
 
 _chpharos_find_versionfile_ascending() {
@@ -514,13 +406,10 @@ chpharos install [--force] <version>        Install Kontena Pharos version. Use 
 chpharos uninstall <version>                Uninstall Kontena Pharos version
 chpharos current [--all]                    Show the current Kontena Pharos version
 chpharos list                               List installed Kontena Pharos versions
-chpharos list-remote [--pre] [--oss]        List remote Kontena Pharos versions available for install
+chpharos list-remote [--pre]
 
 chpharos reset                              Remove chpharos path modifications and disable automatic switching
 chpharos auto                               Load automatic version switcher
-
-chpharos login                              Log in using your Kontena Account credentials
-chpharos logout                             Log out
 
 chpharos --help                             Show this help
 chpharos --version                          Show chpharos version ${CHPHAROS_VERSION}
@@ -535,17 +424,13 @@ _chpharos_subcommand_version() {
   _chpharos_subcommand_current -
 }
 
-_chpharos_auth_header() {
-  echo "Authorization: Bearer ${CHPHAROS_TOKEN}"
-}
-
 _chpharos_get_file_wget() {
   local url="$1"
   local destination="$2"
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
-    final_url="$(wget -O - --quiet -U "${CHPHAROS_UA}" --header="$(_chpharos_auth_header)" "${url}")"
+    final_url="$(wget -O - --quiet -U "${CHPHAROS_UA}" "${url}")"
     [ -z "${final_url}" ] && return 1
   else
     final_url="${url}"
@@ -569,7 +454,7 @@ _chpharos_get_file_curl() {
 
   local final_url
   if [ -z "${url##*get.pharos.sh*}" ]; then
-    final_url="$(curl -sSL -A "${CHPHAROS_UA}" -H "$(_chpharos_auth_header)" "${url}")"
+    final_url="$(curl -sSL -A "${CHPHAROS_UA}" "${url}")"
   else
     final_url="${url}"
   fi
@@ -579,69 +464,42 @@ _chpharos_get_file_curl() {
   curl "-#" -SL "${final_url}" --output "${destination}"
 }
 
-_chpharos_sha_verify() {
-  local file_path="$1"
-  local checksum="$2"
-  if command -v shasum; then
-    echo "${checksum}  ${file_path}" | shasum -a 256 -c - &> /dev/null
-  elif command -v shasum256; then
-    echo "${checksum}  ${file_path}" | sha256sum -c - &> /dev/null
-  fi
+# stolen from https://github.com/rbenv/ruby-build/pull/631/files#diff-fdcfb8a18714b33b07529b7d02b54f1dR942
+function _sort_versions() {
+  sed 'h; s/[+-]/./g; s/.p\([[:digit:]]\)/.z\1/; s/$/.z/; G; s/\n/ /' |
+    LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
 _chpharos_remote_versions_curl() {
-  curl -sSL "${CHPHAROS_SVC_URL}/versions$1" \
-    -A "${CHPHAROS_UA}" \
-    -H "$(_chpharos_auth_header)"
+  curl -sSL "https://api.github.com/repos/kontena/pharos-cluster/releases" \
+    -A "${CHPHAROS_UA}"
 }
 
 _chpharos_remote_versions_wget() {
-  wget "${CHPHAROS_SVC_URL}/versions$1" \
+  wget "https://api.github.com/repos/kontena/pharos-cluster/releases" \
     -o /dev/null \
     -O - \
-    -U "${CHPHAROS_UA}" \
-    --header="$(_chpharos_auth_header)"
+    -U "${CHPHAROS_UA}"
 }
 
 _chpharos_remote_versions() {
-  local pre oss
+  local pre versions
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --pre) pre="?pre=true" ;;
-      --oss) oss="true" ;;
+      --pre) pre="true" ;;
     esac
     shift
   done
-
-  if [ -z "$oss" ]; then
-    "_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" "${pre}" || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
+  versions=$("_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" | grep -oE "tag_name\": *\".{1,15}\"," | sed 's/tag_name\": *\"//;s/\",//;s/v//' | _sort_versions)
+  if [ "$pre" = "true" ]; then
+    echo "${versions}"
   else
-    ("_chpharos_remote_versions_${CHPHAROS_WEB_CLIENT}" "${pre}" | grep "+oss") || _chpharos_error_echo "Your haven't logged in or your session has expired. Use: chpharos login"
+    echo "${versions}" | grep -v "-"
   fi
-}
-
-_chpharos_remote_version_url_data_curl() {
-  curl -sSL "${CHPHAROS_SVC_URL}/versions/files/$1?os=$(_chpharos_os)&cpu=$(_chpharos_cpu)" \
-    -A "${CHPHAROS_UA}" \
-    -H "$(_chpharos_auth_header)"
-}
-
-_chpharos_remote_version_url_data_wget() {
-  wget "${CHPHAROS_SVC_URL}/versions/files/$1?os=$(_chpharos_os)&cpu=$(_chpharos_cpu)" \
-    -o /dev/null \
-    -O - \
-    -U "${CHPHAROS_UA}" \
-    --header="$(_chpharos_auth_header)"
-}
-
-_chpharos_remote_version_url_data() {
-  # shellcheck disable=SC2207
-  "_chpharos_remote_version_url_data_${CHPHAROS_WEB_CLIENT}" "$1"
 }
 
 _chpharos_subcommand_install() {
   _chpharos_validate_external_tools || return 1
-  [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
   local force pre version use
   for opt in "$@"; do
@@ -651,9 +509,9 @@ _chpharos_subcommand_install() {
       --use) use="true" ;;
       --help)
         cat << EOF
-usage: chpharos install [--force] [--pre] [--use] <version|latest|latest+oss>
+usage: chpharos install [--force] [--pre] [--use] <version|latest>
 
-Installs the specified version of pharos-cluster bundle or the latest version when using "latest" or the latest OSS-version when using latest+oss.
+Installs the specified version of pharos-cluster bundle or the latest version when using "latest".
 
 options:
   --force  Force reinstall if version is already installed
@@ -675,10 +533,6 @@ EOF
     version=$(_chpharos_remote_versions "${pre}" | head -1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
   fi
 
-  if [ "${version}" = "latest+oss" ]; then
-    version=$(_chpharos_remote_versions "${pre}" --oss | head -1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
-  fi
-
   if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
     echo "Already installed version ${version}. Use --force to reinstall."
     return 0
@@ -687,41 +541,20 @@ EOF
   local destination_dir="${CHPHAROS_ROOT}/versions/${version}"
   mkdir -p "${destination_dir}" &> /dev/null
 
-  local url_datas
-  # shellcheck disable=SC2207
-  url_datas=($(_chpharos_remote_version_url_data "${version}"))
+  local os=$(_chpharos_os)
+  local dl_filename="pharos-cluster-${os}-amd64-${version}+oss"
+  local dl_url="https://github.com/kontena/pharos-cluster/releases/download/v${version}/${dl_filename}"
+  echo "Downloading Pharos CLI v${version} from Github ..."
 
-  local license_files
-  license_files=()
+  local destination="${destination_dir}/${dl_filename}"
 
-  for url_data in "${url_datas[@]}"; do
-    IFS="|" read -r dl_filename dl_size dl_sha256 dl_url <<<"${url_data}"
-    echo "Downloading '${dl_filename}' (${dl_size} bytes) from ${dl_url} .."
+  "_chpharos_get_file_${CHPHAROS_WEB_CLIENT}" "${dl_url}" "${destination}"
 
-    local destination="${destination_dir}/${dl_filename}"
+  [ -f "${destination}" ] || break
 
-    "_chpharos_get_file_${CHPHAROS_WEB_CLIENT}" "${dl_url}" "${destination}" "${dl_size}"
-
-    [ -f "${destination}" ] || break
-
-    echo -n "Verifying download SHA256 checksum.. "
-
-    if _chpharos_sha_verify "${destination}" "${dl_sha256}"; then
-      echo "OK"
-      if [[ $dl_filename = *license* ]]; then
-        license_files+=("${destination}")
-      else
-        chmod ug+x "${destination}"
-      fi
-    else
-      rm -rf "${destination_dir}"
-      _chpharos_error_echo "checksum verification failed"; break
-    fi
-
-    if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
-      ln -s "${destination_dir}/pharos-cluster" "${destination_dir}/pharos"
-    fi
-  done
+  if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
+    ln -s "${destination_dir}/pharos-cluster" "${destination_dir}/pharos"
+  fi
 
   if [ ! -d "${destination_dir}" ] || [ -z "$(/usr/bin/env ls -A "${destination_dir}")" ]; then
     [ -d "${destination_dir}" ] && rm -rf "${destination_dir}"
@@ -733,13 +566,6 @@ EOF
     else
       echo "Installed and switched to version ${version}."
       _chpharos_subcommand_use "${version}" &> /dev/null
-    fi
-    local license_file
-    if [ ! -z "${license_files[*]}" ]; then
-      echo "The following license files were downloaded, by continuing to use the tools, you agree to the terms:"
-      for license_file in "${license_files[@]}"; do
-        echo "  ${license_file}"
-      done
     fi
   fi
 }
@@ -820,7 +646,6 @@ EOF
 
 _chpharos_subcommand_list_remote() {
   _chpharos_validate_external_tools || return 1
-  [ -z "${CHPHAROS_TOKEN}" ] && _chpharos_error_echo "You need to log in. Use: chpharos login" && return 1
 
   _chpharos_remote_versions "$@" | while IFS="|" read -r version; do
     if _chpharos_version_is_installed "${version}"; then

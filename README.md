@@ -11,23 +11,8 @@ Install and use multiple versions of [pharos-cluster](https://github.com/kontena
 
 - A shell compatible with bash version 3 or newer
 - A tool for downloading files (currently supported: [curl](https://curl.haxx.se/) and [wget](https://www.gnu.org/software/wget/), usually already installed on compatible systems)
-- File checksum verification tool [shasum](https://linux.die.net/man/1/shasum), usually already installed on compatible systems.
 
 ## Usage and features
-
-### Log in to your Kontena Account
-
-Logging in is required for downloading binaries and listing versions.
-
-You can use the interactive login prompt by using:
-
-`chpharos login` 
-
-Or provide the username and password as command-line arguments by using:
-
- `chpharos login --username USERNAME --password PASSWORD`.
-
-Use `chpharos logout` to log out.
 
 ### List available versions
 
@@ -153,7 +138,7 @@ Pharos Cluster is a Kontena Pharos (Kubernetes distribution) management tool. It
 
 ## Contact Us
 
-Found a bug? Suggest a feature? Have a question? Please [submit an issue](https://github.com/kontena/chpharos/issues) or email us at <a href="mailto:info@kontena.io">info@kontena.io</a>.
+Found a bug? Suggest a feature? Have a question? Please [submit an issue](https://github.com/kontena/chpharos/issues).
 
 Follow us on Twitter: [@KontenaInc](https://twitter.com/KontenaInc).
 
