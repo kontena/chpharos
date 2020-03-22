@@ -402,7 +402,7 @@ _chpharos_subcommand_longdash_help() {
 Usage: chpharos <sub-command> <sub-command-options>
 
 chpharos use [--local] <version>            Set the current Pharos version
-chpharos install [--force] <version>        InstallPharos version. Use latest to install the latest version.
+chpharos install [--force] <version>        Install Pharos version. Use latest to install the latest version.
 chpharos uninstall <version>                Uninstall Pharos version
 chpharos current [--all]                    Show the current Pharos version
 chpharos list                               List installed Pharos versions
@@ -546,15 +546,13 @@ EOF
   local dl_url="https://github.com/kontena/pharos-cluster/releases/download/v${version}/${dl_filename}"
   echo "Downloading Pharos CLI v${version} from Github ..."
 
-  local destination="${destination_dir}/${dl_filename}"
+  local destination="${destination_dir}/pharos"
 
   "_chpharos_get_file_${CHPHAROS_WEB_CLIENT}" "${dl_url}" "${destination}"
 
-  [ -f "${destination}" ] || break
+  chmod +x "${destination}"
 
-  if [ "${dl_filename}" = "pharos-cluster" ] && [ ! -f "${destination_dir}/pharos" ]; then
-    ln -s "${destination_dir}/pharos-cluster" "${destination_dir}/pharos"
-  fi
+  [ -f "${destination}" ] || break
 
   if [ ! -d "${destination_dir}" ] || [ -z "$(/usr/bin/env ls -A "${destination_dir}")" ]; then
     [ -d "${destination_dir}" ] && rm -rf "${destination_dir}"
