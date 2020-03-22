@@ -530,7 +530,7 @@ EOF
   fi
 
   if [ "${version}" = "latest" ]; then
-    version=$(_chpharos_remote_versions "${pre}" | head -1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
+    version=$(_chpharos_remote_versions "${pre}" | tail -n1) || (_chpharos_error_eacho "failed to find the latest version"; return 1)
   fi
 
   if _chpharos_version_is_installed "${version}" && [ -z "${force}" ]; then
