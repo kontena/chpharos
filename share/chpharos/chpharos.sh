@@ -542,7 +542,7 @@ EOF
   mkdir -p "${destination_dir}" &> /dev/null
 
   local os=$(_chpharos_os)
-  local dl_filename="pharos-cluster-${os}-amd64-${version}+oss"
+  local dl_filename="pharos-cluster-${os}-amd64-${version}"
   local dl_url="https://github.com/kontena/pharos-cluster/releases/download/v${version}/${dl_filename}"
   echo "Downloading Pharos CLI v${version} from Github ..."
 
