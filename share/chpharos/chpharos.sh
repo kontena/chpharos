@@ -178,7 +178,7 @@
 #
 #    END OF TERMS AND CONDITIONS
 #
-#    Copyright 2018 Kontena, Inc.
+#    Copyright 2020 Lakend Labs, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -401,11 +401,11 @@ _chpharos_subcommand_longdash_help() {
   cat <<EOF
 Usage: chpharos <sub-command> <sub-command-options>
 
-chpharos use [--local] <version>            Set the current Kontena Pharos version
-chpharos install [--force] <version>        Install Kontena Pharos version. Use latest or latest+oss to install the latest version.
-chpharos uninstall <version>                Uninstall Kontena Pharos version
-chpharos current [--all]                    Show the current Kontena Pharos version
-chpharos list                               List installed Kontena Pharos versions
+chpharos use [--local] <version>            Set the current Pharos version
+chpharos install [--force] <version>        InstallPharos version. Use latest to install the latest version.
+chpharos uninstall <version>                Uninstall Pharos version
+chpharos current [--all]                    Show the current Pharos version
+chpharos list                               List installed Pharos versions
 chpharos list-remote [--pre]
 
 chpharos reset                              Remove chpharos path modifications and disable automatic switching
